@@ -37,4 +37,6 @@ export interface SiteSettings {
   heroSubtitle: string;
   heroDescription: string;
   adminEmail: string;
+  logoImageUrl?: string;
+  heroImageUrl?: string;
 }

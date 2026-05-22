@@ -62,10 +62,24 @@ export default function Features() {
                       className="border-t border-slate-800 bg-slate-900/50"
                     >
                       <div className="p-8 pt-6">
-                        <h4 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4">Use Case</h4>
-                        <p className="text-slate-400">
+                        <h4 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-2">Use Case</h4>
+                        <p className="text-slate-400 text-sm mb-5 leading-normal">
                           {feature.useCase}
                         </p>
+                        
+                        <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between gap-4">
+                          <span className="text-[10px] text-slate-500 font-mono tracking-wider uppercase">JetEngine Optimized</span>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.location.hash = `feature/${feature.id}`;
+                            }}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-wider cursor-pointer"
+                          >
+                            <span>Dedicated Feature Page</span>
+                            <Icons.ArrowUpRight className="w-4 h-4 text-emerald-400" />
+                          </button>
+                        </div>
                       </div>
                     </motion.div>
                   )}

@@ -75,65 +75,77 @@ export default function Hero() {
             <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Post Card 1 */}
-            <div className="rounded-xl bg-slate-800/80 border border-slate-700 overflow-hidden relative">
-              <div className="absolute top-3 left-3 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-1 rounded text-xs font-medium backdrop-blur-md">
-                In Stock
-              </div>
-              <div className="h-40 bg-slate-700 w-full animate-pulse"></div>
-              <div className="p-4">
-                <div className="h-5 w-3/4 bg-slate-700 rounded mb-2"></div>
-                <div className="h-4 w-1/2 bg-slate-700/50 rounded mb-6"></div>
-                <div className="flex justify-between items-center">
-                  <span className="h-5 w-1/4 bg-slate-700 rounded"></span>
-                  <button className="p-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors cursor-pointer flex items-center gap-2">
-                    <RefreshCw className="w-4 h-4" />
-                    <span className="text-xs">Toggle</span>
-                  </button>
+          {settings.heroImageUrl ? (
+            <div className="relative rounded-xl overflow-hidden aspect-[16/9] border border-slate-800 max-h-[480px]">
+              <img 
+                src={settings.heroImageUrl} 
+                alt="Product Dashboard Preview" 
+                className="w-full h-full object-cover brightness-[0.9] hover:brightness-[1.0] transition-all duration-500"
+                referrerPolicy="no-referrer"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Post Card 1 */}
+              <div className="rounded-xl bg-slate-800/80 border border-slate-700 overflow-hidden relative">
+                <div className="absolute top-3 left-3 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-1 rounded text-xs font-medium backdrop-blur-md">
+                  In Stock
+                </div>
+                <div className="h-40 bg-slate-700 w-full animate-pulse"></div>
+                <div className="p-4">
+                  <div className="h-5 w-3/4 bg-slate-700 rounded mb-2"></div>
+                  <div className="h-4 w-1/2 bg-slate-700/50 rounded mb-6"></div>
+                  <div className="flex justify-between items-center">
+                    <span className="h-5 w-1/4 bg-slate-700 rounded"></span>
+                    <button className="p-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors cursor-pointer flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4" />
+                      <span className="text-xs">Toggle</span>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Post Card 2 */}
-            <div className="rounded-xl bg-slate-800/80 border border-slate-700 overflow-hidden relative">
-              <div className="absolute top-3 left-3 bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-1 rounded text-xs font-medium backdrop-blur-md">
-                Sold Out
-              </div>
-              <div className="h-40 bg-slate-700 w-full opacity-50"></div>
-              <div className="p-4">
-                <div className="h-5 w-2/3 bg-slate-700 rounded mb-2"></div>
-                <div className="h-4 w-1/3 bg-slate-700/50 rounded mb-6"></div>
-                <div className="flex justify-between items-center">
-                  <span className="h-5 w-1/4 bg-slate-700 rounded"></span>
-                  <button className="p-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors cursor-pointer flex items-center gap-2">
-                    <RefreshCw className="w-4 h-4" />
-                    <span className="text-xs">Toggle</span>
-                  </button>
+              {/* Post Card 2 */}
+              <div className="rounded-xl bg-slate-800/80 border border-slate-700 overflow-hidden relative">
+                <div className="absolute top-3 left-3 bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-1 rounded text-xs font-medium backdrop-blur-md">
+                  Sold Out
+                </div>
+                <div className="h-40 bg-slate-700 w-full opacity-50"></div>
+                <div className="p-4">
+                  <div className="h-5 w-2/3 bg-slate-700 rounded mb-2"></div>
+                  <div className="h-4 w-1/3 bg-slate-700/50 rounded mb-6"></div>
+                  <div className="flex justify-between items-center">
+                    <span className="h-5 w-1/4 bg-slate-700 rounded"></span>
+                    <button className="p-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors cursor-pointer flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4" />
+                      <span className="text-xs">Toggle</span>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Post Card 3 */}
-            <div className="rounded-xl bg-slate-800/80 border border-slate-700 overflow-hidden relative hidden md:block">
-              <div className="absolute top-3 left-3 bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-1 rounded text-xs font-medium backdrop-blur-md flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" />
-                Available
-              </div>
-              <div className="h-40 bg-slate-700 w-full"></div>
-              <div className="p-4">
-                <div className="h-5 w-full bg-slate-700 rounded mb-2"></div>
-                <div className="h-4 w-2/3 bg-slate-700/50 rounded mb-6"></div>
-                <div className="flex justify-between items-center">
-                  <span className="h-5 w-1/4 bg-slate-700 rounded"></span>
-                  <button className="p-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors cursor-pointer flex items-center gap-2">
-                    <RefreshCw className="w-4 h-4 text-blue-400 animate-spin-slow" />
-                    <span className="text-xs text-blue-400">Saving...</span>
-                  </button>
+              {/* Post Card 3 */}
+              <div className="rounded-xl bg-slate-800/80 border border-slate-700 overflow-hidden relative hidden md:block">
+                <div className="absolute top-3 left-3 bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-1 rounded text-xs font-medium backdrop-blur-md flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Available
+                </div>
+                <div className="h-40 bg-slate-700 w-full"></div>
+                <div className="p-4">
+                  <div className="h-5 w-full bg-slate-700 rounded mb-2"></div>
+                  <div className="h-4 w-2/3 bg-slate-700/50 rounded mb-6"></div>
+                  <div className="flex justify-between items-center">
+                    <span className="h-5 w-1/4 bg-slate-700 rounded"></span>
+                    <button className="p-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors cursor-pointer flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4 text-blue-400 animate-spin-slow" />
+                      <span className="text-xs text-blue-400">Saving...</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
           
           {/* Gradient Overlay for bottom fade */}
           <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-slate-900 to-transparent pointer-events-none"></div>

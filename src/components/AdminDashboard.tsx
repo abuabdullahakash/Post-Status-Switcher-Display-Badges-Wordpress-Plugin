@@ -9,6 +9,7 @@ import {
 import { useData } from '../context/DataContext';
 import { Feature, PricingPlan, FAQItem, SiteSettings } from '../types';
 import * as Icons from 'lucide-react';
+import ImageUploader from './ImageUploader';
 
 const {
   Lock, AlertCircle, Sparkles, LogOut, Check, Plus, Trash2, 
@@ -41,7 +42,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<'features' | 'pricing' | 'faq' | 'settings'>('features');
+  const [activeTab, setActiveTab] = useState<'features' | 'pricing' | 'faq' | 'settings' | 'media'>('features');
   
   // Create / Edit states
   const [editingFeature, setEditingFeature] = useState<Feature | null>(null);
@@ -217,14 +218,9 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 overflow-y-auto">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="relative w-full max-w-6xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[90vh]"
-      >
-        {/* Sidebar Nav */}
-        <div className="w-full md:w-64 bg-slate-950 border-r border-slate-800 p-6 flex flex-col justify-between">
+    <div className="min-h-screen w-full bg-slate-950 flex flex-col md:flex-row text-slate-200 overflow-hidden">
+      {/* Sidebar Nav */}
+      <div className="w-full md:w-64 bg-slate-900 border-r border-slate-800/60 p-6 flex flex-col justify-between md:h-screen shrink-0 overflow-y-auto">
           <div>
             <div className="flex items-center gap-3 mb-8">
               <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
@@ -265,6 +261,13 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                 >
                   <Columns className="w-4 h-4" />
                   General Canvas
+                </button>
+                <button 
+                  onClick={() => setActiveTab('media')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'media' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-400' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
+                >
+                  <Icons.CloudLightning className="w-4 h-4 text-emerald-400 animate-pulse" />
+                  Media Cloud (ImgBB)
                 </button>
               </nav>
             )}
@@ -321,23 +324,24 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 flex flex-col min-w-0 bg-slate-900 overflow-y-auto">
+        <div className="flex-1 flex flex-col min-w-0 bg-slate-950 md:h-screen overflow-y-auto">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-800 p-6">
+          <div className="flex items-center justify-between border-b border-slate-900 p-6 bg-slate-900/40 backdrop-blur-sm sticky top-0 z-10">
             <div>
               <h1 className="text-2xl font-display font-bold text-white flex items-center gap-2">
                 PostStatus Customizer
-                <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-sans">
+                <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-sans tracking-wide">
                   Active Realtime Sync
                 </span>
               </h1>
-              <p className="text-slate-400 text-sm mt-1">Changes are directly written to Firestore databases and immediately broadcasted to Vercel/live users.</p>
+              <p className="text-slate-400 text-xs mt-1">Changes are directly written to Firestore databases and immediately broadcasted to live users.</p>
             </div>
             <button 
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-all"
+              className="px-4 py-2 text-xs bg-slate-900 hover:bg-slate-850 hover:text-white text-slate-300 rounded-xl border border-slate-800 hover:border-slate-700 transition-all flex items-center gap-2 font-medium shadow-sm cursor-pointer"
             >
-              <X className="w-6 h-6" />
+              <Icons.Home className="w-3.5 h-3.5 text-blue-400" />
+              <span>Back to Website</span>
             </button>
           </div>
 
@@ -975,6 +979,34 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                           required
                         />
                       </div>
+                      
+                      <div className="md:col-span-2 border-t border-slate-900/60 pt-5 mt-4">
+                        <h4 className="text-sm font-semibold text-white mb-4 flex items-center gap-1.5 uppercase tracking-wide">
+                          <Icons.BadgeCheck className="w-4 h-4 text-blue-400" />
+                          Brand & Product Visuals (ImgBB Cloud Hosting)
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-900/10 p-4 rounded-2xl border border-slate-900/40">
+                          <div className="space-y-2">
+                            <span className="block text-xs font-semibold text-slate-400 uppercase tracking-widest">Header Brand Logo</span>
+                            <ImageUploader 
+                              presetUrl={settings.logoImageUrl}
+                              onUploadSuccess={(url) => updateSettings({ ...settings, logoImageUrl: url })}
+                              label=""
+                            />
+                            <p className="text-[10px] text-slate-550 leading-normal">Allows custom upload via files, drag and drop, or Ctrl+V clipboard paste. Replaces the generic icon with your brand logo in the header and footer.</p>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <span className="block text-xs font-semibold text-slate-400 uppercase tracking-widest">Main Product Mock Image</span>
+                            <ImageUploader 
+                              presetUrl={settings.heroImageUrl}
+                              onUploadSuccess={(url) => updateSettings({ ...settings, heroImageUrl: url })}
+                              label=""
+                            />
+                            <p className="text-[10px] text-slate-550 leading-normal">Loads onto ImgBB and records the direct CDN link on Firestore database. Replaces the default dynamic cards visual with your own custom mockup preview.</p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="flex justify-end pt-4">
@@ -989,11 +1021,27 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                 </div>
               )}
 
+              {/* MEDIA ASSETS TAB */}
+              {activeTab === 'media' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-display font-bold text-white flex items-center gap-2">
+                      <Icons.UploadCloud className="w-5 h-5 text-emerald-400 animate-bounce" />
+                      Freeform Media Cloud Storage
+                    </h3>
+                    <p className="text-sm text-slate-400">Perfect for uploading any file, screenshot, mockup, or image. Paste (Ctrl+V) anywhere on the box or drop. The CDN links generated below will be stored in your browser session history for easy copying.</p>
+                  </div>
+
+                  <div className="p-6 rounded-2xl bg-slate-950 border border-slate-900/60">
+                    <ImageUploader label="Upload and grab direct ImgBB link" />
+                  </div>
+                </div>
+              )}
+
             </div>
           )}
 
         </div>
-      </motion.div>
     </div>
   );
 }

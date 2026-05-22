@@ -320,5 +320,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   heroTitle: 'The Ultimate',
   heroSubtitle: 'Post Status Switcher',
   heroDescription: 'An ultra-light, lightning-fast WordPress plugin that empowers backend workflows and enriches front-end visuals with automated statuses, taxonomy columns, custom criteria, and vibrant display badges.',
-  adminEmail: 'mdakash136915@gmail.com'
+  adminEmail: 'mdakash136915@gmail.com',
+  logoImageUrl: '',
+  heroImageUrl: ''
 };
