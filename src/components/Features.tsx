@@ -74,10 +74,10 @@ export default function Features() {
                               e.stopPropagation();
                               window.location.hash = `feature/${feature.id}`;
                             }}
-                            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-wider cursor-pointer"
+                            className="group/btn inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer active:scale-95 shadow-md shadow-blue-500/20 hover:shadow-blue-500/35 hover:-translate-y-0.5 text-center shrink-0"
                           >
-                            <span>Dedicated Feature Page</span>
-                            <Icons.ArrowUpRight className="w-4 h-4 text-emerald-400" />
+                            <span>Demo</span>
+                            <Icons.ArrowUpRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 shrink-0" />
                           </button>
                         </div>
                       </div>

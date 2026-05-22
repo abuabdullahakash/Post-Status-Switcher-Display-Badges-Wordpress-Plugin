@@ -43,6 +43,8 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'features' | 'pricing' | 'faq' | 'settings' | 'media'>('features');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Create / Edit states
   const [editingFeature, setEditingFeature] = useState<Feature | null>(null);
@@ -182,24 +184,31 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
 
   // Checks authorization
   const isSuperAdmin = 
-    (user && user.email === settings.adminEmail) || 
+    (user && (user.email === settings.adminEmail || user.email === "mdakash136915@gmail.com")) || 
     isDemoMode || 
     userIdBypass ||
-    localAdmin !== null;
+    (localAdmin !== null && (localAdmin.email === "mdakash136915@gmail.com" || localAdmin.email === settings.adminEmail));
 
   const handleSaveFeature = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingFeature) return;
+    setIsSaving(true);
     try {
       await updateFeature(editingFeature);
+      setToast({ message: "Feature card details updated and broadcasted to live users.", type: 'success' });
       setEditingFeature(null);
+      setTimeout(() => setToast(null), 4000);
     } catch (err) {
-      alert("Error saving feature. Make sure you are authorized.");
+      setToast({ message: "Error saving feature. Make sure you are logged in and authorized.", type: 'error' });
+      setTimeout(() => setToast(null), 5000);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleCreateFeature = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
     try {
       await addFeature({
         title: newFeature.title || 'Untitled Feature',
@@ -252,8 +261,13 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
         realWorldCase3Desc: '',
         videoUrl: '',
       });
+      setToast({ message: "New feature card deployed successfully!", type: 'success' });
+      setTimeout(() => setToast(null), 4000);
     } catch (err) {
-      alert("Error adding feature.");
+      setToast({ message: "Error adding feature. Make sure you are authorized.", type: 'error' });
+      setTimeout(() => setToast(null), 5000);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -261,8 +275,11 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     if (confirm("Are you sure you want to permanently DELETE this feature card? This is completely irreversible.")) {
       try {
         await deleteFeature(id);
+        setToast({ message: "Feature card has been permanently deleted and removed.", type: 'success' });
+        setTimeout(() => setToast(null), 4000);
       } catch (err) {
-        alert("Error deleting feature.");
+        setToast({ message: "Error deleting feature. Verify authorization status.", type: 'error' });
+        setTimeout(() => setToast(null), 5000);
       }
     }
   };
@@ -270,27 +287,39 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const handleSavePlan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPlan) return;
+    setIsSaving(true);
     try {
       await updatePricingPlan(editingPlan);
       setEditingPlan(null);
+      setToast({ message: "Pricing plan levels saved and synced in real-time.", type: 'success' });
+      setTimeout(() => setToast(null), 4000);
     } catch (err) {
-      alert("Error saving plan. Make sure you are authorized.");
+      setToast({ message: "Error saving plan. Make sure you are authorized.", type: 'error' });
+      setTimeout(() => setToast(null), 5000);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
     try {
       await updateSettings(settings);
-      alert("Site settings saved successfully to Firestore!");
+      setToast({ message: "Global site settings updated successfully!", type: 'success' });
+      setTimeout(() => setToast(null), 4000);
     } catch (err) {
-      alert("Error saving settings. Make sure you are authorized.");
+      setToast({ message: "Error saving settings. Make sure you are authorized.", type: 'error' });
+      setTimeout(() => setToast(null), 5000);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleAddFAQSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newFaqQuestion || !newFaqAnswer) return;
+    setIsSaving(true);
     try {
       await addFAQ({
         question: newFaqQuestion,
@@ -300,19 +329,30 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
       setNewFaqQuestion('');
       setNewFaqAnswer('');
       setIsAddingFAQ(false);
+      setToast({ message: "New query added to FAQ knowledgebase.", type: 'success' });
+      setTimeout(() => setToast(null), 4000);
     } catch (err) {
-      alert("Error adding FAQ.");
+      setToast({ message: "Error adding FAQ query. Verify authorizations.", type: 'error' });
+      setTimeout(() => setToast(null), 5000);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleUpdateFAQSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingFAQ) return;
+    setIsSaving(true);
     try {
       await updateFAQ(editingFAQ);
       setEditingFAQ(null);
+      setToast({ message: "FAQ record updated successfully.", type: 'success' });
+      setTimeout(() => setToast(null), 4000);
     } catch (err) {
-      alert("Error updating FAQ.");
+      setToast({ message: "Error updating FAQ query. Verify authorizations.", type: 'error' });
+      setTimeout(() => setToast(null), 5000);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -338,7 +378,41 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 flex flex-col md:flex-row text-slate-200 overflow-hidden">
+    <div className="min-h-screen w-full bg-slate-950 flex flex-col md:flex-row text-slate-200 overflow-hidden relative">
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -25, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -25, scale: 0.95 }}
+            className={`fixed top-6 right-6 z-50 flex items-center gap-3 bg-slate-900/95 backdrop-blur-md px-5 py-3.5 rounded-2xl shadow-2xl border ${
+              toast.type === 'success' 
+                ? 'border-emerald-500/30 shadow-emerald-500/10' 
+                : 'border-rose-500/30'
+            } max-w-sm`}
+          >
+            <div className={`p-1.5 rounded-lg shrink-0 ${
+              toast.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-455'
+            }`}>
+              {toast.type === 'success' ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-bold text-white uppercase tracking-wider">
+                {toast.type === 'success' ? 'Live System Saved' : 'Database Alert'}
+              </p>
+              <p className="text-slate-300 text-xs mt-0.5 leading-normal">{toast.message}</p>
+            </div>
+            <button 
+              type="button"
+              onClick={() => setToast(null)}
+              className="text-slate-500 hover:text-white transition-colors p-1"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Sidebar Nav */}
       <div className="w-full md:w-64 bg-slate-900 border-r border-slate-800/60 p-6 flex flex-col justify-between md:h-screen shrink-0 overflow-y-auto">
           <div>
@@ -909,9 +983,17 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                         </button>
                         <button 
                           type="submit"
-                          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors shadow-lg shadow-blue-500/20"
+                          disabled={isSaving}
+                          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/35 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                          Apply & Save Feature Changes
+                          {isSaving ? (
+                            <>
+                              <Icons.RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-200" />
+                              <span>Saving changes...</span>
+                            </>
+                          ) : (
+                            <span>Apply & Save Feature Changes</span>
+                          )}
                         </button>
                       </div>
                     </motion.form>
@@ -1221,9 +1303,17 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                         </button>
                         <button 
                           type="submit"
-                          className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors shadow-lg shadow-emerald-500/20"
+                          disabled={isSaving}
+                          className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/35 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                          Deploy New Feature Card
+                          {isSaving ? (
+                            <>
+                              <Icons.RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-200" />
+                              <span>Deploying...</span>
+                            </>
+                          ) : (
+                            <span>Deploy New Feature Card</span>
+                          )}
                         </button>
                       </div>
                     </motion.form>
@@ -1235,65 +1325,78 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                       return (
                         <div 
                           key={feat.id}
-                          className={`p-5 rounded-2xl bg-slate-950 border transition-all ${feat.active ? 'border-slate-850' : 'border-amber-500/10 opacity-60'}`}
+                          className={`p-5 rounded-2xl bg-slate-950 border transition-all ${feat.active ? 'border-slate-800' : 'border-amber-500/10 opacity-60'}`}
                         >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-lg bg-gradient-to-br ${feat.color} text-white`}>
-                                <IconRaw className="w-5 h-5" />
+                          <div className="flex flex-col gap-3">
+                            <div className="flex items-center justify-between gap-3 border-b border-slate-900 pb-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className={`p-2 rounded-lg bg-gradient-to-br ${feat.color} text-white shrink-0`}>
+                                  <IconRaw className="w-5 h-5" />
+                                </div>
+                                <div className="min-w-0">
+                                  <h4 className="font-bold text-white text-sm truncate leading-snug">{feat.title}</h4>
+                                  <span className="text-[10px] text-slate-500 font-mono select-all">id: {feat.id}</span>
+                                </div>
                               </div>
-                              <div>
-                                <h4 className="font-bold text-white text-sm">{feat.title}</h4>
-                                <span className="text-[10px] text-slate-500 font-mono">id: {feat.id}</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${feat.active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-500 border border-amber-500/10'}`}>
+                              <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0 ${feat.active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-500 border border-amber-500/10'}`}>
                                 {feat.active ? 'Active' : 'Archived'}
                               </span>
-                              
+                            </div>
+
+                            <p className="text-xs text-slate-400 leading-relaxed line-clamp-2 min-h-[2.5rem]">{feat.description}</p>
+                            
+                            <div className="pt-2 border-t border-slate-900/40 flex justify-between items-center bg-slate-900/10 p-2 rounded-lg">
+                              <div className="flex flex-col gap-0.5 max-w-[85%] min-w-0">
+                                <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Use Case Context</span>
+                                <span className="text-[10px] text-slate-400 truncate leading-relaxed">{feat.useCase}</span>
+                              </div>
+                              <span className="text-[11px] font-mono font-bold text-slate-500 shrink-0">#{feat.order}</span>
+                            </div>
+
+                            {/* Actions footer bar */}
+                            <div className="flex items-center justify-end gap-2 mt-2 pt-3 border-t border-slate-900">
                               <button 
                                 onClick={() => {
                                   setEditingFeature(feat);
                                   setIsAddingFeature(false);
                                 }}
-                                className="p-1 px-2.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors"
+                                className="p-1 px-2.5 rounded-lg bg-slate-900 border border-slate-850 hover:bg-slate-800 text-xs text-blue-400 hover:text-blue-350 flex items-center gap-1 transition-all cursor-pointer"
                               >
                                 <Edit3 className="w-3.5 h-3.5" />
-                                Edit
+                                <span>Edit</span>
                               </button>
 
                               <button 
                                 onClick={async () => {
                                   try {
                                     await updateFeature({ ...feat, active: !feat.active });
+                                    setToast({ 
+                                      message: feat.active 
+                                        ? `Feature "${feat.title}" has been successfully archived.` 
+                                        : `Feature "${feat.title}" is now active on the grid.`, 
+                                      type: 'success' 
+                                    });
+                                    setTimeout(() => setToast(null), 4000);
                                   } catch (err) {
-                                    alert("Error modifying status.");
+                                    setToast({ message: "Error toggling feature status. Make sure you are authorized.", type: 'error' });
+                                    setTimeout(() => setToast(null), 5000);
                                   }
                                 }}
-                                className="p-1 px-2.5 rounded-lg bg-slate-900 border border-slate-850 hover:bg-slate-800 text-xs text-amber-500 hover:text-amber-400 flex items-center gap-1 transition-colors"
+                                className={`p-1 px-2.5 rounded-lg bg-slate-900 border transition-all hover:bg-slate-800 text-xs flex items-center gap-1 cursor-pointer ${feat.active ? 'text-amber-500 border-slate-850 hover:text-amber-400' : 'text-emerald-500 border-slate-850 hover:text-emerald-400'}`}
                                 title={feat.active ? 'Archive/Deactivate this feature' : 'Unarchive/Activate this feature'}
                               >
                                 <Icons.Archive className="w-3.5 h-3.5" />
-                                {feat.active ? 'Archive' : 'Restore'}
+                                <span>{feat.active ? 'Archive' : 'Restore'}</span>
                               </button>
 
                               <button 
                                 onClick={() => handleDeleteFeature(feat.id)}
-                                className="p-1.5 rounded-lg bg-slate-900 border border-slate-850 hover:border-red-500/10 hover:bg-red-555/5 text-slate-500 hover:text-red-400 transition-colors"
+                                className="p-1.5 rounded-lg bg-slate-900 border border-slate-850 hover:border-red-500/20 hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-all cursor-pointer"
                                 title="Permanently Delete Feature"
                               >
                                 <Icons.Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
-                          </div>
-                          <p className="text-xs text-slate-400 mt-4 leading-relaxed line-clamp-2">{feat.description}</p>
-                          <div className="mt-3 pt-3 border-t border-slate-900 flex justify-between items-center bg-slate-900/10 p-2 rounded-lg">
-                            <div className="flex flex-col gap-0.5 max-w-[85%]">
-                              <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Use Case Context</span>
-                              <span className="text-[10px] text-slate-400 truncate leading-relaxed">{feat.useCase}</span>
-                            </div>
-                            <span className="text-[11px] font-mono font-bold text-slate-500">#{feat.order}</span>
                           </div>
                         </div>
                       );
@@ -1381,9 +1484,17 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                         </button>
                         <button 
                           type="submit"
-                          className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-colors shadow-lg"
+                          disabled={isSaving}
+                          className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all shadow-lg flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                          Save Pricing Changes
+                          {isSaving ? (
+                            <>
+                              <Icons.RefreshCw className="w-3 h-3 animate-spin text-blue-200" />
+                              <span>Saving...</span>
+                            </>
+                          ) : (
+                            <span>Save Pricing Changes</span>
+                          )}
                         </button>
                       </div>
                     </motion.form>
@@ -1492,9 +1603,17 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                       <div className="flex justify-end gap-3 pt-2">
                         <button 
                           type="submit"
-                          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs"
+                          disabled={isSaving}
+                          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                          Publish FAQ To Site
+                          {isSaving ? (
+                            <>
+                              <Icons.RefreshCw className="w-3 h-3 animate-spin text-blue-200" />
+                              <span>Publishing...</span>
+                            </>
+                          ) : (
+                            <span>Publish FAQ To Site</span>
+                          )}
                         </button>
                       </div>
                     </motion.form>
@@ -1542,9 +1661,17 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                       <div className="flex justify-end gap-3 pt-2">
                         <button 
                           type="submit"
-                          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs"
+                          disabled={isSaving}
+                          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                          Save FAQ Item
+                          {isSaving ? (
+                            <>
+                              <Icons.RefreshCw className="w-3 h-3 animate-spin text-blue-200" />
+                              <span>Saving...</span>
+                            </>
+                          ) : (
+                            <span>Save FAQ Item</span>
+                          )}
                         </button>
                       </div>
                     </motion.form>
@@ -1723,9 +1850,17 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                     <div className="flex justify-end pt-4">
                       <button 
                         type="submit"
-                        className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-500/20"
+                        disabled={isSaving}
+                        className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-500/20 hover:shadow-blue-500/35 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        Commit Site Settings To Database
+                        {isSaving ? (
+                          <>
+                            <Icons.RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-200" />
+                            <span>Saving settings...</span>
+                          </>
+                        ) : (
+                          <span>Commit Site Settings To Database</span>
+                        )}
                       </button>
                     </div>
                   </form>

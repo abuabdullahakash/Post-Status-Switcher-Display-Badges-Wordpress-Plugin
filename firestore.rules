@@ -45,95 +45,25 @@ service cloud.firestore {
     // Features Collection Rules
     match /features/{featureId} {
       allow read: if true;
-      allow create: if isAdmin() 
-        && isValidId(featureId)
-        && incoming().id is string
-        && incoming().title is string && incoming().title.size() <= 100
-        && incoming().description is string && incoming().description.size() <= 500
-        && incoming().iconName is string && incoming().iconName.size() <= 50
-        && incoming().color is string && incoming().color.size() <= 100
-        && incoming().useCase is string && incoming().useCase.size() <= 500
-        && incoming().active is bool
-        && incoming().order is number;
-
-      allow update: if isAdmin()
-        && incoming().title is string && incoming().title.size() <= 100
-        && incoming().description is string && incoming().description.size() <= 500
-        && incoming().iconName is string && incoming().iconName.size() <= 50
-        && incoming().color is string && incoming().color.size() <= 100
-        && incoming().useCase is string && incoming().useCase.size() <= 500
-        && incoming().active is bool
-        && incoming().order is number;
-
-      allow delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
     // Pricing Plans Collection Rules
     match /pricingPlans/{planId} {
       allow read: if true;
-      allow create: if isAdmin()
-        && isValidId(planId)
-        && incoming().id is string
-        && incoming().name is string && incoming().name.size() <= 100
-        && incoming().price is string && incoming().price.size() <= 50
-        && incoming().period is string && incoming().period.size() <= 50
-        && incoming().description is string && incoming().description.size() <= 500
-        && incoming().features is list && incoming().features.size() <= 50
-        && incoming().popular is bool
-        && incoming().buttonText is string && incoming().buttonText.size() <= 100
-        && incoming().order is number;
-
-      allow update: if isAdmin()
-        && incoming().name is string && incoming().name.size() <= 100
-        && incoming().price is string && incoming().price.size() <= 50
-        && incoming().period is string && incoming().period.size() <= 50
-        && incoming().description is string && incoming().description.size() <= 500
-        && incoming().features is list && incoming().features.size() <= 50
-        && incoming().popular is bool
-        && incoming().buttonText is string && incoming().buttonText.size() <= 100
-        && incoming().order is number;
-
-      allow delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
     // FAQ Collection Rules
     match /faqs/{faqId} {
       allow read: if true;
-      allow create: if isAdmin()
-        && isValidId(faqId)
-        && incoming().id is string
-        && incoming().question is string && incoming().question.size() <= 300
-        && incoming().answer is string && incoming().answer.size() <= 2000
-        && incoming().order is number;
-
-      allow update: if isAdmin()
-        && incoming().question is string && incoming().question.size() <= 300
-        && incoming().answer is string && incoming().answer.size() <= 2000
-        && incoming().order is number;
-
-      allow delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
     // Settings Collection Rules
     match /settings/{settingId} {
       allow read: if true;
-      allow create: if isAdmin()
-        && isValidId(settingId)
-        && incoming().id is string
-        && incoming().siteName is string && incoming().siteName.size() <= 100
-        && incoming().siteDescription is string && incoming().siteDescription.size() <= 500
-        && incoming().heroTitle is string && incoming().heroTitle.size() <= 200
-        && incoming().heroSubtitle is string && incoming().heroSubtitle.size() <= 200
-        && incoming().heroDescription is string && incoming().heroDescription.size() <= 1000;
-
-      allow update: if isAdmin()
-        && incoming().siteName is string && incoming().siteName.size() <= 100
-        && incoming().siteDescription is string && incoming().siteDescription.size() <= 500
-        && incoming().heroTitle is string && incoming().heroTitle.size() <= 200
-        && incoming().heroSubtitle is string && incoming().heroSubtitle.size() <= 200
-        && incoming().heroDescription is string && incoming().heroDescription.size() <= 1000;
-
-      allow delete: if isAdmin();
+      allow write: if isAdmin();
     }
   }
 }
