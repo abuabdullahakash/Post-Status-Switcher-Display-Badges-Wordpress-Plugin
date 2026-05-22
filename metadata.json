@@ -1,0 +1,6 @@
+{
+  "name": "Post Status Switcher & Display Badges",
+  "description": "A world-class product landing page and documentation portal for the Post Status Switcher & Display Badges plugin.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
