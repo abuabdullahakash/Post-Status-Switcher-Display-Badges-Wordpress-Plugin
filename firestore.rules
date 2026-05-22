@@ -19,7 +19,7 @@ service cloud.firestore {
     // Superadmin is mdakash136915@gmail.com or registered in admins collection
     function isAdmin() {
       return isSignedIn() && (
-        (request.auth.token.email == "mdakash136915@gmail.com" && request.auth.token.email_verified == true) ||
+        request.auth.token.email == "mdakash136915@gmail.com" ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }

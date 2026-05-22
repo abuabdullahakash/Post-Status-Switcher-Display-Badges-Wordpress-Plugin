@@ -322,5 +322,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   heroDescription: 'An ultra-light, lightning-fast WordPress plugin that empowers backend workflows and enriches front-end visuals with automated statuses, taxonomy columns, custom criteria, and vibrant display badges.',
   adminEmail: 'mdakash136915@gmail.com',
   logoImageUrl: '',
-  heroImageUrl: ''
+  heroImageUrl: '',
+  adminName: 'Md. Akash',
+  adminAvatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&h=256&auto=format&fit=crop'
 };

@@ -7,6 +7,27 @@ export interface Feature {
   useCase: string;
   active: boolean;
   order: number;
+  
+  // Custom single page elements
+  testimonialQuote?: string;
+  testimonialAuthor?: string;
+  testimonialRole?: string;
+  
+  realWorldCase1Title?: string;
+  realWorldCase1Subtitle?: string;
+  realWorldCase1Desc?: string;
+  realWorldCase1Tag?: string;
+
+  realWorldCase2Title?: string;
+  realWorldCase2Subtitle?: string;
+  realWorldCase2Desc?: string;
+  realWorldCase2Tag?: string;
+
+  realWorldCase3Title?: string;
+  realWorldCase3Subtitle?: string;
+  realWorldCase3Desc?: string;
+  realWorldCase3Tag?: string;
+  videoUrl?: string;
 }
 
 export interface PricingPlan {
@@ -39,4 +60,6 @@ export interface SiteSettings {
   adminEmail: string;
   logoImageUrl?: string;
   heroImageUrl?: string;
+  adminName?: string;
+  adminAvatarUrl?: string;
 }

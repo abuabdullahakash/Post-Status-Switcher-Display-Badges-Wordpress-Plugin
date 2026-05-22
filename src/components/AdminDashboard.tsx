@@ -4,7 +4,7 @@ import {
   auth 
 } from '../lib/firebase';
 import { 
-  signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User, signInWithEmailAndPassword 
+  signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword 
 } from 'firebase/auth';
 import { useData } from '../context/DataContext';
 import { Feature, PricingPlan, FAQItem, SiteSettings } from '../types';
@@ -31,7 +31,7 @@ const lucideIconNames = [
 export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const { 
     features, pricingPlans, faqs, settings, isBootstrapping,
-    updateFeature, updatePricingPlan, updateSettings, addFAQ, updateFAQ, deleteFAQ, resetToDefaults
+    updateFeature, addFeature, deleteFeature, updatePricingPlan, updateSettings, addFAQ, updateFAQ, deleteFAQ, resetToDefaults
   } = useData();
 
   const [user, setUser] = useState<User | null>(null);
@@ -46,6 +46,31 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   
   // Create / Edit states
   const [editingFeature, setEditingFeature] = useState<Feature | null>(null);
+  const [isAddingFeature, setIsAddingFeature] = useState(false);
+  const [newFeature, setNewFeature] = useState<Partial<Feature>>({
+    title: '',
+    description: '',
+    iconName: 'Sparkles',
+    color: 'from-blue-500 to-indigo-500',
+    useCase: '',
+    active: true,
+    order: features.length + 1,
+    testimonialQuote: '',
+    testimonialAuthor: '',
+    testimonialRole: '',
+    realWorldCase1Title: '',
+    realWorldCase1Subtitle: '',
+    realWorldCase1Tag: '',
+    realWorldCase1Desc: '',
+    realWorldCase2Title: '',
+    realWorldCase2Subtitle: '',
+    realWorldCase2Tag: '',
+    realWorldCase2Desc: '',
+    realWorldCase3Title: '',
+    realWorldCase3Subtitle: '',
+    realWorldCase3Tag: '',
+    realWorldCase3Desc: '',
+  });
   const [editingPlan, setEditingPlan] = useState<PricingPlan | null>(null);
   const [editingFAQ, setEditingFAQ] = useState<FAQItem | null>(null);
   const [isAddingFAQ, setIsAddingFAQ] = useState(false);
@@ -67,10 +92,16 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
 
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
+    setLoginError(null);
     try {
       await signInWithPopup(auth, provider);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Google Authentication error:", err);
+      if (err.code === 'auth/popup-closed-by-user' || err.message?.includes('popup-closed-by-user')) {
+        setLoginError("The login popup was closed. IMPORTANT: If you are viewing this app inside the Google AI Studio iframe preview, standard login popups are blocked by browser iframe security. Please click the 'Open in New Tab' icon at the top-right corner of the screen to log in with Google, or sign in using the Email & Password option below!");
+      } else {
+        setLoginError(`Google Sign-In failed: ${err.message || String(err)}`);
+      }
     }
   };
 
@@ -81,7 +112,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     try {
       // First try real Firebase Email/Password auth
       try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
         const signedInUser = userCredential.user;
         if (signedInUser.email === settings.adminEmail) {
           setIsLoggingIn(false);
@@ -92,6 +123,26 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
       } catch (fbError: any) {
         console.warn("Firebase Email Login failed or option is disabled in console:", fbError);
         
+        // If they entered the superadmin email, attempt automatic account creation in Firebase Auth 
+        // to sync Firestore authentication and avoid permissions issues!
+        if (email.trim() === "mdakash136915@gmail.com" && (
+          fbError.code === 'auth/user-not-found' || 
+          fbError.code === 'auth/invalid-credential' || 
+          fbError.code === 'auth/invalid-login-credentials' ||
+          fbError.message?.includes('user-not-found') || 
+          fbError.message?.includes('INVALID_LOGIN_CREDENTIALS')
+        )) {
+          try {
+            console.log("Superadmin user not registered in Firebase Auth, attempting auto-creation...");
+            const signUpCred = await createUserWithEmailAndPassword(auth, "mdakash136915@gmail.com", password);
+            console.log("Superadmin auto-creation and login successful!");
+            setIsLoggingIn(false);
+            return;
+          } catch (signUpErr: any) {
+            console.error("Superadmin auto-creation failed:", signUpErr);
+          }
+        }
+
         // Check fallback if it matches the specific mdakash136915@gmail.com and password config
         if (email.trim() === "mdakash136915@gmail.com" && password === '@12a"ak"') {
           setLocalAdmin({
@@ -108,7 +159,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
         } else if (fbError.code === 'auth/invalid-email') {
           errMsg = "The email address is badly formatted.";
         }
-        throw new Error(errMsg);
+        throw new Error(fbError.message || errMsg);
       }
     } catch (err: any) {
       setLoginError(err.message || String(err));
@@ -144,6 +195,75 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
       setEditingFeature(null);
     } catch (err) {
       alert("Error saving feature. Make sure you are authorized.");
+    }
+  };
+
+  const handleCreateFeature = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await addFeature({
+        title: newFeature.title || 'Untitled Feature',
+        description: newFeature.description || '',
+        iconName: newFeature.iconName || 'Sparkles',
+        color: newFeature.color || 'from-blue-500 to-indigo-500',
+        useCase: newFeature.useCase || '',
+        active: newFeature.active !== false,
+        order: Number(newFeature.order) || features.length + 1,
+        testimonialQuote: newFeature.testimonialQuote || '',
+        testimonialAuthor: newFeature.testimonialAuthor || '',
+        testimonialRole: newFeature.testimonialRole || '',
+        realWorldCase1Title: newFeature.realWorldCase1Title || '',
+        realWorldCase1Subtitle: newFeature.realWorldCase1Subtitle || '',
+        realWorldCase1Tag: newFeature.realWorldCase1Tag || '',
+        realWorldCase1Desc: newFeature.realWorldCase1Desc || '',
+        realWorldCase2Title: newFeature.realWorldCase2Title || '',
+        realWorldCase2Subtitle: newFeature.realWorldCase2Subtitle || '',
+        realWorldCase2Tag: newFeature.realWorldCase2Tag || '',
+        realWorldCase2Desc: newFeature.realWorldCase2Desc || '',
+        realWorldCase3Title: newFeature.realWorldCase3Title || '',
+        realWorldCase3Subtitle: newFeature.realWorldCase3Subtitle || '',
+        realWorldCase3Tag: newFeature.realWorldCase3Tag || '',
+        realWorldCase3Desc: newFeature.realWorldCase3Desc || '',
+        videoUrl: newFeature.videoUrl || '',
+      });
+      setIsAddingFeature(false);
+      setNewFeature({
+        title: '',
+        description: '',
+        iconName: 'Sparkles',
+        color: 'from-blue-500 to-indigo-500',
+        useCase: '',
+        active: true,
+        order: features.length + 2,
+        testimonialQuote: '',
+        testimonialAuthor: '',
+        testimonialRole: '',
+        realWorldCase1Title: '',
+        realWorldCase1Subtitle: '',
+        realWorldCase1Tag: '',
+        realWorldCase1Desc: '',
+        realWorldCase2Title: '',
+        realWorldCase2Subtitle: '',
+        realWorldCase2Tag: '',
+        realWorldCase2Desc: '',
+        realWorldCase3Title: '',
+        realWorldCase3Subtitle: '',
+        realWorldCase3Tag: '',
+        realWorldCase3Desc: '',
+        videoUrl: '',
+      });
+    } catch (err) {
+      alert("Error adding feature.");
+    }
+  };
+
+  const handleDeleteFeature = async (id: string) => {
+    if (confirm("Are you sure you want to permanently DELETE this feature card? This is completely irreversible.")) {
+      try {
+        await deleteFeature(id);
+      } catch (err) {
+        alert("Error deleting feature.");
+      }
     }
   };
 
@@ -278,14 +398,14 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <img 
-                    src={user?.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&h=256&auto=format&fit=crop'} 
+                    src={settings.adminAvatarUrl || user?.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&h=256&auto=format&fit=crop'} 
                     referrerPolicy="no-referrer"
-                    alt={user?.displayName || localAdmin?.displayName || 'Admin'} 
+                    alt={settings.adminName || user?.displayName || localAdmin?.displayName || 'Admin'} 
                     className="w-10 h-10 rounded-full border border-blue-500/30 object-cover"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-white truncate">{user?.displayName || localAdmin?.displayName || 'Super Admin'}</p>
-                    <p className="text-slate-500 text-xs truncate">{user?.email || localAdmin?.email}</p>
+                    <p className="text-sm font-semibold text-white truncate">{settings.adminName || user?.displayName || localAdmin?.displayName || 'Super Admin'}</p>
+                    <p className="text-slate-505 text-xs truncate">{user?.email || localAdmin?.email}</p>
                   </div>
                 </div>
                 {user && user.email !== settings.adminEmail && (
@@ -481,11 +601,24 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
               {/* FEATURES TAB */}
               {activeTab === 'features' && (
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center bg-slate-950 p-5 rounded-2xl border border-slate-900">
                     <div>
-                      <h3 className="text-xl font-display font-bold text-white">Dynamic Feature Cards</h3>
-                      <p className="text-sm text-slate-400">Enable, disable, update badges, icons, gradients or use-cases of the 16 features grid.</p>
+                      <h3 className="text-xl font-display font-bold text-white flex items-center gap-2">
+                        <Icons.Sparkles className="w-5 h-5 text-blue-400" />
+                        Dynamic Feature Cards
+                      </h3>
+                      <p className="text-sm text-slate-400 mt-1">Enable, disable, update badges, icons, gradients or use-cases of the 16 features grid.</p>
                     </div>
+                    <button 
+                      onClick={() => {
+                        setIsAddingFeature(true);
+                        setEditingFeature(null);
+                      }}
+                      className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg transition-all"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add New Feature
+                    </button>
                   </div>
 
                   {editingFeature ? (
@@ -561,19 +694,536 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                         </div>
                       </div>
 
-                      <div className="flex justify-end gap-3 pt-4">
+                      {/* Advanced Single Page Content */}
+                      <div className="border-t border-slate-900 pt-6 mt-6 space-y-4">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
+                          <h5 className="text-sm font-bold text-white uppercase tracking-wider">Features Single-Page Custom Overrides</h5>
+                        </div>
+                        <p className="text-xs text-slate-400">Configure custom testimonials and real-world cases displayed in this specific feature's individual details page. Backs up to high-quality fallback presets if left blank.</p>
+
+                        {/* Video Showcase Input Block */}
+                        <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Icons.Video className="w-4 h-4 text-indigo-400" />
+                            <span className="text-[10px] uppercase font-bold text-indigo-400 tracking-wider block">Custom Showcase Video URL</span>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1 font-medium">Link Web Asset or Youtube embed (supports Ctrl+V and quick pasting)</label>
+                            <input 
+                              type="text"
+                              value={editingFeature.videoUrl || ""}
+                              onChange={(e) => setEditingFeature({ ...editingFeature, videoUrl: e.target.value })}
+                              placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ or https://myhost.com/video.mp4"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-slate-300 text-sm focus:outline-none focus:border-indigo-500 font-mono"
+                            />
+                            <p className="text-[10px] text-slate-500 mt-1">Accepts YouTube watch links or direct MP4/WebM video asset. If left blank, defaults to a high-quality coding stock loop.</p>
+                          </div>
+                        </div>
+
+                        {/* Testimonial Fields Group */}
+                        <div className="p-4 rounded-xl bg-slate-900/30 border border-slate-900 space-y-3">
+                          <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Bespoke Customer Interview</span>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="md:col-span-2">
+                              <label className="block text-[11px] text-slate-400 mb-1">Quote</label>
+                              <textarea
+                                value={editingFeature.testimonialQuote || ""}
+                                onChange={(e) => setEditingFeature({ ...editingFeature, testimonialQuote: e.target.value })}
+                                placeholder="Integrating post-status badges transformed our content dashboard transparency..."
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs h-16 focus:outline-none focus:border-blue-500 resize-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1">Author Name</label>
+                              <input 
+                                type="text" 
+                                placeholder="Alex Mercer"
+                                value={editingFeature.testimonialAuthor || ""}
+                                onChange={(e) => setEditingFeature({ ...editingFeature, testimonialAuthor: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1">Author Profession/Company Info</label>
+                              <input 
+                                type="text" 
+                                placeholder="Lead React Architect, JetLabs"
+                                value={editingFeature.testimonialRole || ""}
+                                onChange={(e) => setEditingFeature({ ...editingFeature, testimonialRole: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Use Case 1 */}
+                        <div className="p-4 rounded-xl bg-slate-900/30 border border-slate-900 space-y-3">
+                          <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Custom Use-Case #1 Details</span>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Title</label>
+                              <input 
+                                type="text" 
+                                placeholder="Automated Recruitment Lists"
+                                value={editingFeature.realWorldCase1Title || ""}
+                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase1Title: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Subtitle</label>
+                              <input 
+                                type="text" 
+                                placeholder="Interactive tracking"
+                                value={editingFeature.realWorldCase1Subtitle || ""}
+                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase1Subtitle: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Tag / Category Badge</label>
+                              <input 
+                                type="text" 
+                                placeholder="HR Board"
+                                value={editingFeature.realWorldCase1Tag || ""}
+                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase1Tag: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div className="md:col-span-3">
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Description</label>
+                              <input 
+                                type="text" 
+                                placeholder="Help recruiters see applicant counts directly on job postings automatically without refreshing."
+                                value={editingFeature.realWorldCase1Desc || ""}
+                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase1Desc: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Use Case 2 */}
+                        <div className="p-4 rounded-xl bg-slate-900/30 border border-slate-900 space-y-3">
+                          <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Custom Use-Case #2 Details</span>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Title</label>
+                              <input 
+                                type="text" 
+                                placeholder="E-Commerce Badges"
+                                value={editingFeature.realWorldCase2Title || ""}
+                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase2Title: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Subtitle</label>
+                              <input 
+                                type="text" 
+                                placeholder="Increase Conversions"
+                                value={editingFeature.realWorldCase2Subtitle || ""}
+                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase2Subtitle: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Tag / Category Badge</label>
+                              <input 
+                                type="text" 
+                                placeholder="WooCommerce"
+                                value={editingFeature.realWorldCase2Tag || ""}
+                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase2Tag: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div className="md:col-span-3">
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Description</label>
+                              <input 
+                                type="text" 
+                                placeholder="Trigger in stock and low inventory warnings instantly with specific color combinations."
+                                value={editingFeature.realWorldCase2Desc || ""}
+                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase2Desc: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Use Case 3 */}
+                        <div className="p-4 rounded-xl bg-slate-900/30 border border-slate-900 space-y-3">
+                          <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Custom Use-Case #3 Details</span>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Title</label>
+                              <input 
+                                type="text" 
+                                placeholder="Medical Staff Portals"
+                                value={editingFeature.realWorldCase3Title || ""}
+                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase3Title: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Subtitle</label>
+                              <input 
+                                type="text" 
+                                placeholder="Interactive Booking"
+                                value={editingFeature.realWorldCase3Subtitle || ""}
+                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase3Subtitle: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Tag / Category Badge</label>
+                              <input 
+                                type="text" 
+                                placeholder="Healthcare"
+                                value={editingFeature.realWorldCase3Tag || ""}
+                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase3Tag: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div className="md:col-span-3">
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Description</label>
+                              <input 
+                                type="text" 
+                                placeholder="Track clinic rooms or active appointments in real time using green online indicators."
+                                value={editingFeature.realWorldCase3Desc || ""}
+                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase3Desc: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-3 pt-4 border-t border-slate-900 mt-4">
                         <button 
                           type="button" 
                           onClick={() => setEditingFeature(null)}
-                          className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white transition-colors"
+                          className="px-4 py-2 hover:bg-slate-900 rounded-xl text-xs text-slate-400 hover:text-white transition-colors"
                         >
                           Cancel
                         </button>
                         <button 
                           type="submit"
-                          className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-colors shadow-lg"
+                          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors shadow-lg shadow-blue-500/20"
                         >
-                          Apply Changes
+                          Apply & Save Feature Changes
+                        </button>
+                      </div>
+                    </motion.form>
+                  ) : null}
+
+                  {isAddingFeature ? (
+                    <motion.form 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      onSubmit={handleCreateFeature}
+                      className="p-6 rounded-2xl bg-slate-950 border border-emerald-500/20 space-y-4 shadow-xl shadow-emerald-500/5"
+                    >
+                      <div className="flex justify-between items-center pb-2 border-b border-slate-900">
+                        <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                          <Icons.BadgeAlert className="w-4 h-4 text-emerald-400" />
+                          Create New Feature Card Content
+                        </h4>
+                        <button 
+                          type="button" 
+                          onClick={() => setIsAddingFeature(false)}
+                          className="text-xs text-slate-500 hover:text-white transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs text-slate-400 mb-1 font-medium">Card Title</label>
+                          <input 
+                            type="text"
+                            value={newFeature.title || ''}
+                            onChange={(e) => setNewFeature({ ...newFeature, title: e.target.value })}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500"
+                            placeholder="e.g., Live Agent Desk"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-400 mb-1 font-medium">Use Case Color Layout (Tailwind Gradient)</label>
+                          <input 
+                            type="text"
+                            value={newFeature.color || ''}
+                            onChange={(e) => setNewFeature({ ...newFeature, color: e.target.value })}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm font-mono focus:outline-none focus:border-blue-500"
+                            placeholder="from-emerald-500 to-teal-600"
+                            required
+                          />
+                          <span className="text-[10px] text-slate-500">e.g., from-blue-500 to-indigo-500 or from-rose-500 to-red-600</span>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-xs text-slate-400 mb-1 font-medium">Card High-level Description</label>
+                          <textarea 
+                            value={newFeature.description || ''}
+                            onChange={(e) => setNewFeature({ ...newFeature, description: e.target.value })}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-white text-sm h-20 focus:outline-none focus:border-blue-500 resize-none"
+                            placeholder="A concise, engaging copy summarising this premium booster feature card..."
+                            required
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-xs text-slate-400 mb-1 font-medium">Detailed Real-World Use Case Action</label>
+                          <textarea 
+                            value={newFeature.useCase || ''}
+                            onChange={(e) => setNewFeature({ ...newFeature, useCase: e.target.value })}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-white text-sm h-20 focus:outline-none focus:border-blue-500 resize-none"
+                            placeholder="Describe concrete scenarios in which site admins rely on this feature's dynamic tags..."
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-400 mb-1 font-medium">Lucide Vector Icon Family</label>
+                          <select 
+                            value={newFeature.iconName || 'Sparkles'}
+                            onChange={(e) => setNewFeature({ ...newFeature, iconName: e.target.value })}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-300 text-sm focus:outline-none focus:border-blue-500"
+                          >
+                            {lucideIconNames.map(name => (
+                              <option key={name} value={name}>{name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex items-center h-full pt-6">
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input 
+                              type="checkbox"
+                              checked={newFeature.active !== false}
+                              onChange={(e) => setNewFeature({ ...newFeature, active: e.target.checked })}
+                              className="w-4 h-4 accent-blue-500"
+                            />
+                            <span className="text-sm text-slate-300 font-medium">Publish Feature Active / Enabled</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Advanced Single Page Content */}
+                      <div className="border-t border-slate-900 pt-6 mt-6 space-y-4">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
+                          <h5 className="text-sm font-bold text-white uppercase tracking-wider">Features Single-Page Custom Overrides (Optional)</h5>
+                        </div>
+                        <p className="text-xs text-slate-400">Configure custom testimonials and real-world cases displayed in this specific feature's individual details page.</p>
+
+                        {/* Video Showcase Input Block */}
+                        <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Icons.Video className="w-4 h-4 text-indigo-400" />
+                            <span className="text-[10px] uppercase font-bold text-indigo-400 tracking-wider block">Custom Showcase Video URL</span>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1 font-medium">Link Web Asset or Youtube embed (supports Ctrl+V and quick pasting)</label>
+                            <input 
+                              type="text"
+                              value={newFeature.videoUrl || ""}
+                              onChange={(e) => setNewFeature({ ...newFeature, videoUrl: e.target.value })}
+                              placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ or https://myhost.com/video.mp4"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-slate-300 text-sm focus:outline-none focus:border-indigo-500 font-mono"
+                            />
+                            <p className="text-[10px] text-slate-500 mt-1">Accepts YouTube watch links or direct MP4/WebM video asset. If left blank, defaults to a high-quality coding stock loop.</p>
+                          </div>
+                        </div>
+
+                        {/* Testimonial Fields Group */}
+                        <div className="p-4 rounded-xl bg-slate-900/30 border border-slate-900 space-y-3">
+                          <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Bespoke Customer Interview</span>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="md:col-span-2">
+                              <label className="block text-[11px] text-slate-400 mb-1">Quote</label>
+                              <textarea
+                                value={newFeature.testimonialQuote || ""}
+                                onChange={(e) => setNewFeature({ ...newFeature, testimonialQuote: e.target.value })}
+                                placeholder="Integrating post-status badges transformed our content dashboard transparency..."
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs h-16 focus:outline-none focus:border-blue-500 resize-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1">Author Name</label>
+                              <input 
+                                type="text" 
+                                placeholder="Alex Mercer"
+                                value={newFeature.testimonialAuthor || ""}
+                                onChange={(e) => setNewFeature({ ...newFeature, testimonialAuthor: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1">Author Profession/Company Info</label>
+                              <input 
+                                type="text" 
+                                placeholder="Lead React Architect, JetLabs"
+                                value={newFeature.testimonialRole || ""}
+                                onChange={(e) => setNewFeature({ ...newFeature, testimonialRole: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Use Case 1 */}
+                        <div className="p-4 rounded-xl bg-slate-900/30 border border-slate-900 space-y-3">
+                          <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Custom Use-Case #1 Details</span>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Title</label>
+                              <input 
+                                type="text" 
+                                placeholder="Automated Recruitment Lists"
+                                value={newFeature.realWorldCase1Title || ""}
+                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase1Title: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Subtitle</label>
+                              <input 
+                                type="text" 
+                                placeholder="Interactive tracking"
+                                value={newFeature.realWorldCase1Subtitle || ""}
+                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase1Subtitle: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Tag / Category Badge</label>
+                              <input 
+                                type="text" 
+                                placeholder="HR Board"
+                                value={newFeature.realWorldCase1Tag || ""}
+                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase1Tag: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div className="md:col-span-3">
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Description</label>
+                              <input 
+                                type="text" 
+                                placeholder="Help recruiters see applicant counts directly on job postings automatically without refreshing."
+                                value={newFeature.realWorldCase1Desc || ""}
+                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase1Desc: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Use Case 2 */}
+                        <div className="p-4 rounded-xl bg-slate-900/30 border border-slate-900 space-y-3">
+                          <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Custom Use-Case #2 Details</span>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Title</label>
+                              <input 
+                                type="text" 
+                                placeholder="E-Commerce Badges"
+                                value={newFeature.realWorldCase2Title || ""}
+                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase2Title: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Subtitle</label>
+                              <input 
+                                type="text" 
+                                placeholder="Increase Conversions"
+                                value={newFeature.realWorldCase2Subtitle || ""}
+                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase2Subtitle: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Tag / Category Badge</label>
+                              <input 
+                                type="text" 
+                                placeholder="WooCommerce"
+                                value={newFeature.realWorldCase2Tag || ""}
+                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase2Tag: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div className="md:col-span-3">
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Description</label>
+                              <input 
+                                type="text" 
+                                placeholder="Trigger in stock and low inventory warnings instantly with specific color combinations."
+                                value={newFeature.realWorldCase2Desc || ""}
+                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase2Desc: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Use Case 3 */}
+                        <div className="p-4 rounded-xl bg-slate-900/30 border border-slate-900 space-y-3">
+                          <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Custom Use-Case #3 Details</span>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Title</label>
+                              <input 
+                                type="text" 
+                                placeholder="Medical Staff Portals"
+                                value={newFeature.realWorldCase3Title || ""}
+                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase3Title: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Subtitle</label>
+                              <input 
+                                type="text" 
+                                placeholder="Interactive Booking"
+                                value={newFeature.realWorldCase3Subtitle || ""}
+                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase3Subtitle: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Tag / Category Badge</label>
+                              <input 
+                                type="text" 
+                                placeholder="Healthcare"
+                                value={newFeature.realWorldCase3Tag || ""}
+                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase3Tag: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div className="md:col-span-3">
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Description</label>
+                              <input 
+                                type="text" 
+                                placeholder="Track clinic rooms or active appointments in real time using green online indicators."
+                                value={newFeature.realWorldCase3Desc || ""}
+                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase3Desc: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-3 pt-4 border-t border-slate-900 mt-4">
+                        <button 
+                          type="button" 
+                          onClick={() => setIsAddingFeature(false)}
+                          className="px-4 py-2 hover:bg-slate-900 rounded-xl text-xs text-slate-400 hover:text-white transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button 
+                          type="submit"
+                          className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors shadow-lg shadow-emerald-500/20"
+                        >
+                          Deploy New Feature Card
                         </button>
                       </div>
                     </motion.form>
@@ -585,9 +1235,9 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                       return (
                         <div 
                           key={feat.id}
-                          className={`p-5 rounded-2xl bg-slate-950 border transition-all ${feat.active ? 'border-slate-850' : 'border-red-500/10 opacity-60'}`}
+                          className={`p-5 rounded-2xl bg-slate-950 border transition-all ${feat.active ? 'border-slate-850' : 'border-amber-500/10 opacity-60'}`}
                         >
-                          <div className="flex items-start justify-between">
+                          <div className="flex items-start justify-between gap-4">
                             <div className="flex items-center gap-3">
                               <div className={`p-2 rounded-lg bg-gradient-to-br ${feat.color} text-white`}>
                                 <IconRaw className="w-5 h-5" />
@@ -597,16 +1247,43 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                                 <span className="text-[10px] text-slate-500 font-mono">id: {feat.id}</span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${feat.active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400 border border-red-500/10'}`}>
-                                {feat.active ? 'Active' : 'Disabled'}
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${feat.active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-500 border border-amber-500/10'}`}>
+                                {feat.active ? 'Active' : 'Archived'}
                               </span>
+                              
                               <button 
-                                onClick={() => setEditingFeature(feat)}
+                                onClick={() => {
+                                  setEditingFeature(feat);
+                                  setIsAddingFeature(false);
+                                }}
                                 className="p-1 px-2.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors"
                               >
                                 <Edit3 className="w-3.5 h-3.5" />
                                 Edit
+                              </button>
+
+                              <button 
+                                onClick={async () => {
+                                  try {
+                                    await updateFeature({ ...feat, active: !feat.active });
+                                  } catch (err) {
+                                    alert("Error modifying status.");
+                                  }
+                                }}
+                                className="p-1 px-2.5 rounded-lg bg-slate-900 border border-slate-850 hover:bg-slate-800 text-xs text-amber-500 hover:text-amber-400 flex items-center gap-1 transition-colors"
+                                title={feat.active ? 'Archive/Deactivate this feature' : 'Unarchive/Activate this feature'}
+                              >
+                                <Icons.Archive className="w-3.5 h-3.5" />
+                                {feat.active ? 'Archive' : 'Restore'}
+                              </button>
+
+                              <button 
+                                onClick={() => handleDeleteFeature(feat.id)}
+                                className="p-1.5 rounded-lg bg-slate-900 border border-slate-850 hover:border-red-500/10 hover:bg-red-555/5 text-slate-500 hover:text-red-400 transition-colors"
+                                title="Permanently Delete Feature"
+                              >
+                                <Icons.Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </div>
@@ -1007,6 +1684,40 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                           </div>
                         </div>
                       </div>
+
+                      {/* ADMIN PROFILE EDIT MODULE */}
+                      <div className="md:col-span-2 border-t border-slate-900/60 pt-5 mt-4">
+                        <h4 className="text-sm font-semibold text-white mb-4 flex items-center gap-1.5 uppercase tracking-wide">
+                          <Icons.User className="w-4 h-4 text-emerald-400 animate-pulse" />
+                          Logged-In Admin Profile Settings
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-900/10 p-4 rounded-2xl border border-slate-900/40">
+                          <div className="space-y-3 justify-center flex flex-col">
+                            <div>
+                              <label className="block text-xs text-slate-400 mb-1.5 font-medium">Profile Display Name</label>
+                              <input 
+                                type="text"
+                                value={settings.adminName || ""}
+                                onChange={(e) => updateSettings({ ...settings, adminName: e.target.value })}
+                                placeholder="Md. Akash"
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-emerald-500"
+                              />
+                            </div>
+                            <p className="text-[10px] text-slate-500 leading-normal">Customize the display name shown in the sidebar when you or any other super-administrator logs in.</p>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <span className="block text-xs font-semibold text-slate-400 uppercase tracking-widest">Profile Avatar Image</span>
+                            <ImageUploader 
+                              presetUrl={settings.adminAvatarUrl}
+                              onUploadSuccess={(url) => updateSettings({ ...settings, adminAvatarUrl: url })}
+                              label=""
+                            />
+                            <p className="text-[10px] text-slate-550 leading-normal">Change your profile picture quickly. Drag-and-drop support, file selection, or direct pasting (Ctrl+V) from the clipboard are fully integrated.</p>
+                          </div>
+                        </div>
+                      </div>
+
                     </div>
 
                     <div className="flex justify-end pt-4">

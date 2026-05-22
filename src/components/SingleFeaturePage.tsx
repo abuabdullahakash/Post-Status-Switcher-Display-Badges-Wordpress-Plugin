@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowLeft, Check, Compass, Sparkles, Star, ChevronRight, HelpCircle, 
   Settings, Layers, Terminal, AlertTriangle, Play, RefreshCw, ShoppingCart, 
-  Timer, Columns, Zap, Home, Users, LockOpen, AlertCircle, Globe, Shield, CheckCircle
+  Timer, Columns, Zap, Home, Users, LockOpen, AlertCircle, Globe, Shield, CheckCircle, Video
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { Feature } from '../types';
+import PremiumVideoPlayer from './PremiumVideoPlayer';
 
 interface SingleFeaturePageProps {
   featureId: string;
@@ -142,10 +143,10 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
     }
   };
 
-  const featureTestimonial = testimonialsMap[feature.id] || {
-    quote: "Integrating these custom display badges transformed how users visually explore status changes across our custom tables.",
-    author: "Alex Mercer",
-    role: "Senior Consultant, JetDevelopers"
+  const featureTestimonial = {
+    quote: feature.testimonialQuote || testimonialsMap[feature.id]?.quote || "Integrating these custom display badges transformed how users visually explore status changes across our custom tables.",
+    author: feature.testimonialAuthor || testimonialsMap[feature.id]?.author || "Alex Mercer",
+    role: feature.testimonialRole || testimonialsMap[feature.id]?.role || "Senior Consultant, JetDevelopers"
   };
 
   // Custom Real World use cases per feature
@@ -202,11 +203,37 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
     ]
   };
 
-  const currentCases = realWorldCases[feature.id] || [
+  const dynamicCases = [];
+  if (feature.realWorldCase1Title) {
+    dynamicCases.push({
+      title: feature.realWorldCase1Title,
+      subtitle: feature.realWorldCase1Subtitle || "Deployment Setup",
+      description: feature.realWorldCase1Desc || "",
+      tag: feature.realWorldCase1Tag || "Custom Setup"
+    });
+  }
+  if (feature.realWorldCase2Title) {
+    dynamicCases.push({
+      title: feature.realWorldCase2Title,
+      subtitle: feature.realWorldCase2Subtitle || "Deployment Setup",
+      description: feature.realWorldCase2Desc || "",
+      tag: feature.realWorldCase2Tag || "Custom Setup"
+    });
+  }
+  if (feature.realWorldCase3Title) {
+    dynamicCases.push({
+      title: feature.realWorldCase3Title,
+      subtitle: feature.realWorldCase3Subtitle || "Deployment Setup",
+      description: feature.realWorldCase3Desc || "",
+      tag: feature.realWorldCase3Tag || "Custom Setup"
+    });
+  }
+
+  const currentCases = dynamicCases.length > 0 ? dynamicCases : (realWorldCases[feature.id] || [
     { title: "Custom Database Lists", subtitle: "Interactive Tracking", description: "Sync document values instantly to represent statuses on cards.", tag: "General CPTs" },
     { title: "Dynamic Pages Layouts", subtitle: "Rich Visibility", description: "Format layout visibility on elements dynamically centered on specific status keys.", tag: "Layouts Builder" },
     { title: "Filtered Grids UI", subtitle: "Faceted Sorting", description: "Give customers sorting sliders targeting this specific metadata parameter.", tag: "Smart Filters" }
-  ];
+  ]);
 
   // Recommendations: exclude current, get 3 related active ones
   const relatedFeatures = features
@@ -713,19 +740,42 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
 
               <div className="flex flex-wrap gap-4 pt-6 border-t border-slate-900">
                 <button 
-                  onClick={() => scrollToId('live-sandbox-controller')}
+                  onClick={() => scrollToId('live-video-walkthrough')}
                   className="px-7 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xl shadow-blue-500/15 cursor-pointer flex items-center gap-2"
                 >
-                  <Play className="w-3.5 h-3.5 text-emerald-300" /> See Live Demo
+                  <Play className="w-3.5 h-3.5 text-emerald-300" /> Watch Video Walkthrough
                 </button>
                 <button 
-                  onClick={() => scrollToId('pricing-bottom-section')}
-                  className="px-7 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 hover:text-white text-slate-300 border border-slate-800 hover:border-slate-700 transition-all text-xs font-bold uppercase tracking-wider cursor-pointer"
+                  onClick={() => scrollToId('live-sandbox-controller')}
+                  className="px-7 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 hover:text-white text-slate-300 border border-slate-800 hover:border-slate-700 transition-all text-xs font-bold uppercase tracking-wider cursor-pointer font-sans"
                 >
-                  Get Started
+                  Play with Sandbox
                 </button>
               </div>
             </motion.div>
+
+            {/* VIDEO SHOWCASE SECTION */}
+            <div id="live-video-walkthrough" className="scroll-mt-24 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-display font-extrabold text-white flex items-center gap-2">
+                    <Video className="w-5 h-5 text-indigo-400 animate-pulse" />
+                    Premium Video Tutorial Showcase
+                  </h2>
+                  <p className="text-slate-400 text-sm mt-1">
+                    Watch the {feature?.title || 'Feature'} plugin block operate in actual WordPress workflows. Double-click the screen to toggle audio.
+                  </p>
+                </div>
+                <span className="self-start sm:self-center px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-mono text-indigo-400 font-bold uppercase tracking-wider">Dynamic Stream v2.0</span>
+              </div>
+              
+              <div className="bg-slate-900/40 border border-slate-900/80 rounded-3xl p-6 shadow-inner">
+                <PremiumVideoPlayer 
+                  videoUrl={feature?.videoUrl || "https://assets.mixkit.co/videos/preview/mixkit-web-development-code-on-a-screen-closeup-42240-large.mp4"} 
+                  title={feature?.title} 
+                />
+              </div>
+            </div>
 
             {/* 2. INTERACTIVE VISUAL PREVIEW / DEMO BLOCK */}
             <div id="live-sandbox-controller" className="scroll-mt-24 space-y-6">

@@ -63,6 +63,8 @@ interface DataContextType {
   loading: boolean;
   isBootstrapping: boolean;
   updateFeature: (feature: Feature) => Promise<void>;
+  addFeature: (feature: Omit<Feature, 'id'>) => Promise<void>;
+  deleteFeature: (id: string) => Promise<void>;
   updatePricingPlan: (plan: PricingPlan) => Promise<void>;
   updateSettings: (settings: SiteSettings) => Promise<void>;
   addFAQ: (faq: Omit<FAQItem, 'id'>) => Promise<void>;
@@ -201,6 +203,26 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const addFeature = async (feature: Omit<Feature, 'id'>) => {
+    const id = `feature-${Date.now()}`;
+    const newFeat: Feature = { ...feature, id };
+    const path = `features/${id}`;
+    try {
+      await setDoc(doc(db, 'features', id), newFeat);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  };
+
+  const deleteFeature = async (id: string) => {
+    const path = `features/${id}`;
+    try {
+      await deleteDoc(doc(db, 'features', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  };
+
   const updatePricingPlan = async (plan: PricingPlan) => {
     const path = `pricingPlans/${plan.id}`;
     try {
@@ -289,6 +311,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       loading: loading && !fallbackFeatures.length,
       isBootstrapping,
       updateFeature,
+      addFeature,
+      deleteFeature,
       updatePricingPlan,
       updateSettings,
       addFAQ,
