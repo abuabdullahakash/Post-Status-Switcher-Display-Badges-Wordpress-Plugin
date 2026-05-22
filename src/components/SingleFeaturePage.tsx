@@ -711,9 +711,9 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
               </div>
               
               <div className="space-y-4">
-                <h1 className="text-4xl md:text-5xl font-display font-black text-white tracking-tight flex items-center gap-4">
-                  <div className={`p-3 md:p-4 rounded-2xl bg-gradient-to-br ${feature.color} shadow-xl text-white shrink-0`}>
-                    <IconComponent className="w-8 h-8 md:w-10 md:h-10" />
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-black text-white tracking-tight flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                  <div className={`self-start sm:self-auto p-3 md:p-4 rounded-2xl bg-gradient-to-br ${feature.color} shadow-xl text-white shrink-0`}>
+                    <IconComponent className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10" />
                   </div>
                   <span>{feature.title}</span>
                 </h1>

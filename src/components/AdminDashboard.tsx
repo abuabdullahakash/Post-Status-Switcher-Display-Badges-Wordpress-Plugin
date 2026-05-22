@@ -446,19 +446,19 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
         {/* Content Area */}
         <div className="flex-1 flex flex-col min-w-0 bg-slate-950 md:h-screen overflow-y-auto">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-900 p-6 bg-slate-900/40 backdrop-blur-sm sticky top-0 z-10">
-            <div>
-              <h1 className="text-2xl font-display font-bold text-white flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-900 p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm sticky top-0 z-10">
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-2xl font-display font-bold text-white flex flex-wrap items-center gap-2">
                 PostStatus Customizer
-                <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-sans tracking-wide">
+                <span className="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-sans tracking-wide shrink-0">
                   Active Realtime Sync
                 </span>
               </h1>
-              <p className="text-slate-400 text-xs mt-1">Changes are directly written to Firestore databases and immediately broadcasted to live users.</p>
+              <p className="text-slate-400 text-[11px] sm:text-xs mt-1 leading-normal max-w-xl">Changes are directly written to Firestore databases and immediately broadcasted to live users.</p>
             </div>
             <button 
               onClick={onClose}
-              className="px-4 py-2 text-xs bg-slate-900 hover:bg-slate-850 hover:text-white text-slate-300 rounded-xl border border-slate-800 hover:border-slate-700 transition-all flex items-center gap-2 font-medium shadow-sm cursor-pointer"
+              className="w-full sm:w-auto justify-center px-4 py-2.5 text-xs bg-slate-900 hover:bg-slate-850 hover:text-white text-slate-300 rounded-xl border border-slate-800 hover:border-slate-700 transition-all flex items-center gap-2 font-medium shadow-sm cursor-pointer shrink-0"
             >
               <Icons.Home className="w-3.5 h-3.5 text-blue-400" />
               <span>Back to Website</span>

@@ -23,6 +23,9 @@ export default function PremiumVideoPlayer({ videoUrl, title = "Feature Demo Pre
   // Parse if YouTube Link
   const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
   
+  // Parse if Google Drive Link
+  const isDrive = videoUrl.includes('drive.google.com');
+  
   // Extract YouTube ID
   let youtubeId = '';
   if (isYouTube) {
@@ -30,6 +33,28 @@ export default function PremiumVideoPlayer({ videoUrl, title = "Feature Demo Pre
     const match = videoUrl.match(regExp);
     if (match && match[2].length === 11) {
       youtubeId = match[2];
+    }
+  }
+
+  // Extract Google Drive ID and formulate direct video stream URL
+  let driveDirectUrl = '';
+  let driveId = '';
+  if (isDrive) {
+    try {
+      const regExp = /\/file\/d\/([^\/?#]+)/;
+      const match = videoUrl.match(regExp);
+      if (match) {
+        driveId = match[1];
+      } else {
+        const urlObj = new URL(videoUrl);
+        driveId = urlObj.searchParams.get('id') || '';
+      }
+      if (driveId) {
+        // Direct stream and download link for Google Drive files
+        driveDirectUrl = `https://drive.google.com/uc?export=download&id=${driveId}`;
+      }
+    } catch (e) {
+      console.error("Failed to parse Google Drive link:", e);
     }
   }
 
@@ -271,7 +296,7 @@ export default function PremiumVideoPlayer({ videoUrl, title = "Feature Demo Pre
         ) : videoUrl ? (
           <video
             ref={videoRef}
-            src={videoUrl}
+            src={isDrive ? driveDirectUrl : videoUrl}
             className="w-full h-full object-cover z-10"
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={handleVideoLoadedMetadata}
@@ -372,7 +397,7 @@ export default function PremiumVideoPlayer({ videoUrl, title = "Feature Demo Pre
             </div>
             
             <span className="px-2.5 py-1 rounded bg-slate-900/40 border border-slate-900 text-[10px] font-mono text-slate-500">
-              {isYouTube ? 'Youtube Stream' : 'Native MP4'}
+              {isYouTube ? 'Youtube Stream' : isDrive ? 'Google Drive Stream' : 'Native MP4'}
             </span>
           </div>
         </div>
