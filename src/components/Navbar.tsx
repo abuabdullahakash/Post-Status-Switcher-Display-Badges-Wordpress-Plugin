@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Settings2, Menu, X } from 'lucide-react';
+import { Settings2, Menu, X, ShieldAlert } from 'lucide-react';
+import { useData } from '../context/DataContext';
 
-export default function Navbar() {
+export default function Navbar({ onOpenAdmin }: { onOpenAdmin?: () => void }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { settings } = useData();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -29,14 +31,18 @@ export default function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-emerald-400 p-[1px]">
               <div className="w-full h-full bg-slate-950 rounded-lg flex items-center justify-center">
                 <Settings2 className="w-5 h-5 text-emerald-400" />
               </div>
             </div>
             <span className="font-display font-bold text-xl tracking-tight">
-              Post<span className="text-emerald-400">Status</span>
+              {settings.siteName === 'PostStatus' ? (
+                <>Post<span className="text-emerald-400">Status</span></>
+              ) : (
+                settings.siteName
+              )}
             </span>
           </div>
 
@@ -49,7 +55,17 @@ export default function Navbar() {
             ))}
           </div>
 
-          <div className="hidden md:flex items-center">
+          <div className="hidden md:flex items-center gap-4">
+            {onOpenAdmin && (
+              <button 
+                onClick={onOpenAdmin}
+                className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-all flex items-center gap-1.5 text-xs font-semibold"
+                title="Open Admin Dashboard"
+              >
+                <ShieldAlert className="w-4 h-4 text-emerald-400" />
+                Admin
+              </button>
+            )}
             <a href="#pricing" className="px-5 py-2.5 rounded-full bg-white text-slate-900 font-medium text-sm hover:bg-slate-100 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.1)]">
               Get Started
             </a>
@@ -77,6 +93,18 @@ export default function Navbar() {
               {link.name}
             </a>
           ))}
+          {onOpenAdmin && (
+            <button 
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onOpenAdmin();
+              }}
+              className="w-full text-left px-3 py-2 text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800 flex items-center gap-2"
+            >
+              <ShieldAlert className="w-4 h-4 text-emerald-400" />
+              Admin Dashboard
+            </button>
+          )}
           <div className="px-3 pt-2">
             <a href="#pricing" className="block w-full text-center px-5 py-3 rounded-lg bg-blue-500 text-white font-medium hover:bg-blue-600">
               Get Started

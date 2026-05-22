@@ -1,7 +1,10 @@
 import { motion } from 'motion/react';
 import { ArrowRight, Play, CheckCircle2, RefreshCw } from 'lucide-react';
+import { useData } from '../context/DataContext';
 
 export default function Hero() {
+  const { settings } = useData();
+
   return (
     <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
       {/* Background Glows */}
@@ -28,9 +31,8 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-5xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight mb-6 leading-tight"
           >
-            The Ultimate <br className="hidden md:block" />
-            <span className="text-gradient">Post Status Switcher</span> <br className="hidden md:block"/>
-            & Display Badges
+            {settings.heroTitle} <br className="hidden md:block" />
+            <span className="text-gradient">{settings.heroSubtitle}</span>
           </motion.h1>
           
           <motion.p 
@@ -39,7 +41,7 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-lg md:text-xl text-slate-400 mb-10 max-w-3xl mx-auto leading-relaxed"
           >
-            Effortlessly change dynamic post and product statuses directly from JetEngine Listing grids and display beautiful conditional badges on the frontend. Built exclusively for Elementor.
+            {settings.heroDescription}
           </motion.p>
           
           <motion.div 
@@ -48,11 +50,11 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
-            <a href="#pricing" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center justify-center gap-2 transition-all shadow-[0_0_30px_rgba(59,130,246,0.3)] hover:shadow-[0_0_40px_rgba(59,130,246,0.5)]">
+            <a href="#pricing" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center justify-center gap-2 transition-all shadow-[0_0_30px_rgba(59,130,246,0.3)] hover:shadow-[0_0_40px_rgba(59,130,246,0.5)] cursor-pointer">
               Get Started
               <ArrowRight className="w-5 h-5" />
             </a>
-            <a href="#features" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium flex items-center justify-center gap-2 transition-all border border-slate-700 hover:border-slate-600">
+            <a href="#features" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium flex items-center justify-center gap-2 transition-all border border-slate-700 hover:border-slate-600 cursor-pointer">
               <Play className="w-5 h-5" />
               Explore Features
             </a>

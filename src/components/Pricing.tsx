@@ -1,57 +1,14 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Check, ShieldCheck } from 'lucide-react';
+import { useData } from '../context/DataContext';
 
 export default function Pricing() {
   const [billingCycle, setBillingCycle] = useState<'annual' | 'lifetime'>('annual');
+  const { pricingPlans } = useData();
 
-  const plans = [
-    {
-      name: 'Personal',
-      description: 'Perfect for a single project or portfolio site.',
-      price: billingCycle === 'annual' ? 19 : 49,
-      sites: '1 Site',
-      popular: false,
-      features: [
-        '1 Year Updates',
-        '1 Year Premium Support',
-        'All Core Features',
-        'WooCommerce Integration',
-        '30-Day Money-Back Guarantee'
-      ]
-    },
-    {
-      name: 'Business',
-      description: 'Ideal for freelancers and small agencies.',
-      price: billingCycle === 'annual' ? 49 : 149,
-      sites: '5 Sites',
-      popular: false,
-      features: [
-        '1 Year Updates',
-        '1 Year Premium Support',
-        'All Core Features',
-        'WooCommerce Integration',
-        'Advanced Dynamic Visibility',
-        '30-Day Money-Back Guarantee'
-      ]
-    },
-    {
-      name: 'Developer',
-      description: 'Built for large agencies and web professionals.',
-      price: billingCycle === 'annual' ? 99 : 299,
-      sites: 'Unlimited',
-      popular: true,
-      features: [
-        'Lifetime Updates',
-        'Lifetime Premium Support',
-        'All Core Features',
-        'WooCommerce Integration',
-        'Advanced Dynamic Visibility',
-        'White Label Options',
-        '30-Day Money-Back Guarantee'
-      ]
-    }
-  ];
+  // Filter plans based on selected period
+  const activePlans = pricingPlans.filter(plan => plan.period === billingCycle);
 
   return (
     <section id="pricing" className="py-24 bg-slate-950 relative">
@@ -66,13 +23,13 @@ export default function Pricing() {
           <div className="inline-flex items-center p-1 bg-slate-900 border border-slate-800 rounded-full">
             <button
               onClick={() => setBillingCycle('annual')}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${billingCycle === 'annual' ? 'bg-blue-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${billingCycle === 'annual' ? 'bg-blue-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
             >
               Annual
             </button>
             <button
               onClick={() => setBillingCycle('lifetime')}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${billingCycle === 'lifetime' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 cursor-pointer ${billingCycle === 'lifetime' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
             >
               Lifetime
               <span className="flex h-2 w-2 rounded-full bg-yellow-300"></span>
@@ -81,9 +38,9 @@ export default function Pricing() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {plans.map((plan, index) => (
+          {activePlans.map((plan, index) => (
             <motion.div
-              key={plan.name}
+              key={plan.id}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -124,12 +81,12 @@ export default function Pricing() {
                 ))}
               </ul>
               
-              <button className={`w-full py-4 rounded-xl font-medium transition-all ${
+              <button className={`w-full py-4 rounded-xl font-medium transition-all cursor-pointer ${
                 plan.popular 
                   ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]' 
                   : 'bg-slate-800 hover:bg-slate-700 text-white' 
               }`}>
-                Get {plan.name}
+                {plan.buttonText || `Get ${plan.name}`}
               </button>
             </motion.div>
           ))}

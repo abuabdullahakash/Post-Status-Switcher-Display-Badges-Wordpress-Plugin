@@ -1,6 +1,9 @@
-import { Settings2, ArrowRight } from 'lucide-react';
+import { Settings2, ArrowRight, ShieldCheck } from 'lucide-react';
+import { useData } from '../context/DataContext';
 
-export default function Footer() {
+export default function Footer({ onOpenAdmin }: { onOpenAdmin?: () => void }) {
+  const { settings } = useData();
+
   return (
     <footer className="bg-slate-950 pt-20 pb-10 border-t border-slate-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -12,7 +15,11 @@ export default function Footer() {
                 <Settings2 className="w-4 h-4 text-emerald-400" />
               </div>
               <span className="font-display font-bold text-lg tracking-tight">
-                Post<span className="text-emerald-400">Status</span>
+                {settings.siteName === 'PostStatus' ? (
+                  <>Post<span className="text-emerald-400">Status</span></>
+                ) : (
+                  settings.siteName
+                )}
               </span>
             </div>
             <p className="text-slate-400 text-sm max-w-sm mb-8 leading-relaxed">
@@ -61,10 +68,18 @@ export default function Footer() {
 
         <div className="pt-8 border-t border-slate-900 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-slate-500 text-sm">
-            © {new Date().getFullYear()} Post Status Switcher Plugin. Not affiliated with Crocoblock or Elementor.
+            © {new Date().getFullYear()} {settings.siteName} Plugin. Not affiliated with Crocoblock or Elementor.
           </p>
           <div className="flex items-center gap-4">
-             {/* Social links placeholder if needed */}
+            {onOpenAdmin && (
+              <button 
+                onClick={onOpenAdmin}
+                className="flex items-center gap-1 text-slate-500 hover:text-blue-400 text-xs transition-colors hover:underline"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                Administrator Dashboard
+              </button>
+            )}
           </div>
         </div>
       </div>

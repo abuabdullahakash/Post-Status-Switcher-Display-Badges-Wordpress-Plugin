@@ -1,0 +1,86 @@
+{
+  "entities": {
+    "feature": {
+      "title": "Module Feature",
+      "description": "Represents a Post Status and Badge feature card.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "iconName": { "type": "string" },
+        "color": { "type": "string" },
+        "useCase": { "type": "string" },
+        "active": { "type": "boolean" },
+        "order": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "description", "iconName", "color", "useCase", "active", "order"]
+    },
+    "pricingPlan": {
+      "title": "Pricing Plan",
+      "description": "Pricing plan subscription details.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "string" },
+        "period": { "type": "string" },
+        "description": { "type": "string" },
+        "features": {
+          "type": "array",
+          "description": "List of features included in the plan"
+        },
+        "popular": { "type": "boolean" },
+        "buttonText": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["id", "name", "price", "period", "description", "features", "popular", "buttonText", "order"]
+    },
+    "faq": {
+      "title": "FAQ Item",
+      "description": "Frequently Asked Question item.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "question": { "type": "string" },
+        "answer": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["id", "question", "answer", "order"]
+    },
+    "setting": {
+      "title": "Global Settings",
+      "description": "Global custom landing page settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "siteName": { "type": "string" },
+        "siteDescription": { "type": "string" },
+        "heroTitle": { "type": "string" },
+        "heroSubtitle": { "type": "string" },
+        "heroDescription": { "type": "string" },
+        "adminEmail": { "type": "string" }
+      },
+      "required": ["id", "siteName", "siteDescription", "heroTitle", "heroSubtitle", "heroDescription"]
+    }
+  },
+  "firestore": {
+    "/features/{featureId}": {
+      "schema": { "$ref": "#/entities/feature" },
+      "description": "Collection of all WP Post Status switcher and badge features"
+    },
+    "/pricingPlans/{planId}": {
+      "schema": { "$ref": "#/entities/pricingPlan" },
+      "description": "Collection of all pricing plans"
+    },
+    "/faqs/{faqId}": {
+      "schema": { "$ref": "#/entities/faq" },
+      "description": "Collection of all FAQs"
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/setting" },
+      "description": "Collection of settings (usually just 'global' doc)"
+    }
+  }
+}
