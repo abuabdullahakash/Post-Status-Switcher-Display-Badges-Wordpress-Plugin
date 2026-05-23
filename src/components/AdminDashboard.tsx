@@ -41,7 +41,6 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [isDemoMode, setIsDemoMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'features' | 'pricing' | 'faq' | 'settings' | 'media'>('features');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -81,87 +80,83 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [newFaqQuestion, setNewFaqQuestion] = useState('');
   const [newFaqAnswer, setNewFaqAnswer] = useState('');
 
-  // Track Google Login Setup
+  // Track Superadmin state
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      if (currentUser && currentUser.email === settings.adminEmail) {
-        setIsDemoMode(false);
+      if (currentUser) {
+        if (currentUser.email === "mdakash136915@gmail.com") {
+          setUser(currentUser);
+        } else {
+          // Force sign out of any other unauthorized accounts
+          signOut(auth);
+          setUser(null);
+        }
+      } else {
+        setUser(null);
       }
     });
     return () => unsub();
-  }, [settings.adminEmail]);
-
-  const handleGoogleLogin = async () => {
-    const provider = new GoogleAuthProvider();
-    setLoginError(null);
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (err: any) {
-      console.error("Google Authentication error:", err);
-      if (err.code === 'auth/popup-closed-by-user' || err.message?.includes('popup-closed-by-user')) {
-        setLoginError("The login popup was closed. IMPORTANT: If you are viewing this app inside the Google AI Studio iframe preview, standard login popups are blocked by browser iframe security. Please click the 'Open in New Tab' icon at the top-right corner of the screen to log in with Google, or sign in using the Email & Password option below!");
-      } else {
-        setLoginError(`Google Sign-In failed: ${err.message || String(err)}`);
-      }
-    }
-  };
+  }, []);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
     setIsLoggingIn(true);
+    
+    const targetEmail = "mdakash136915@gmail.com";
+    const targetPassword = '@12a"ak"';
+
+    const enteredEmail = email.trim();
+    if (enteredEmail.toLowerCase() !== targetEmail) {
+      setLoginError("Unauthorized Admin Account. Only the official administrator can access this panel.");
+      setIsLoggingIn(false);
+      return;
+    }
+
     try {
       // First try real Firebase Email/Password auth
       try {
-        const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+        const userCredential = await signInWithEmailAndPassword(auth, targetEmail, password);
         const signedInUser = userCredential.user;
-        if (signedInUser.email === settings.adminEmail) {
+        if (signedInUser.email === targetEmail) {
           setIsLoggingIn(false);
           return;
         } else {
-          alert("Firebase logged in successfully, but email is not specified as superadmin.");
+          setLoginError("Authorized credentials mismatch.");
         }
       } catch (fbError: any) {
         console.warn("Firebase Email Login failed or option is disabled in console:", fbError);
         
-        // If they entered the superadmin email, attempt automatic account creation in Firebase Auth 
-        // to sync Firestore authentication and avoid permissions issues!
-        if (email.trim() === "mdakash136915@gmail.com" && (
-          fbError.code === 'auth/user-not-found' || 
-          fbError.code === 'auth/invalid-credential' || 
-          fbError.code === 'auth/invalid-login-credentials' ||
-          fbError.message?.includes('user-not-found') || 
-          fbError.message?.includes('INVALID_LOGIN_CREDENTIALS')
-        )) {
-          try {
-            console.log("Superadmin user not registered in Firebase Auth, attempting auto-creation...");
-            const signUpCred = await createUserWithEmailAndPassword(auth, "mdakash136915@gmail.com", password);
-            console.log("Superadmin auto-creation and login successful!");
-            setIsLoggingIn(false);
-            return;
-          } catch (signUpErr: any) {
-            console.error("Superadmin auto-creation failed:", signUpErr);
+        // If they entered the correct credentials but register is missing in Firebase Auth, auto-create it
+        if (password === targetPassword) {
+          if (
+            fbError.code === 'auth/user-not-found' || 
+            fbError.code === 'auth/invalid-credential' || 
+            fbError.code === 'auth/invalid-login-credentials' ||
+            fbError.message?.includes('user-not-found') || 
+            fbError.message?.includes('INVALID_LOGIN_CREDENTIALS')
+          ) {
+            try {
+              console.log("Superadmin user not registered in Firebase Auth, attempting auto-creation...");
+              await createUserWithEmailAndPassword(auth, targetEmail, password);
+              console.log("Superadmin auto-creation and login successful!");
+              setIsLoggingIn(false);
+              return;
+            } catch (signUpErr: any) {
+              console.error("Superadmin auto-creation failed:", signUpErr);
+            }
           }
-        }
-
-        // Check fallback if it matches the specific mdakash136915@gmail.com and password config
-        if (email.trim() === "mdakash136915@gmail.com" && password === '@12a"ak"') {
+          
+          // Successful fallback to local state if Firebase configuration restricts signup
           setLocalAdmin({
-            email: "mdakash136915@gmail.com",
+            email: targetEmail,
             displayName: "Md. Akash"
           });
           setIsLoggingIn(false);
           return;
+        } else {
+          setLoginError("Incorrect password. Please try again.");
         }
-        
-        let errMsg = "Authentication failed. Please verify credentials.";
-        if (fbError.code === 'auth/wrong-password' || fbError.code === 'auth/user-not-found') {
-          errMsg = "Invalid email or password. Please try again.";
-        } else if (fbError.code === 'auth/invalid-email') {
-          errMsg = "The email address is badly formatted.";
-        }
-        throw new Error(fbError.message || errMsg);
       }
     } catch (err: any) {
       setLoginError(err.message || String(err));
@@ -173,21 +168,18 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      setUserIdBypass(false);
       setLocalAdmin(null);
     } catch (err) {
       console.error("Sign out error:", err);
     }
   };
 
-  const [userIdBypass, setUserIdBypass] = useState(false);
+  const isDemoMode = false;
 
-  // Checks authorization
+  // Checks authorization - Strictly restricted to admin mdakash136915@gmail.com
   const isSuperAdmin = 
-    (user && (user.email === settings.adminEmail || user.email === "mdakash136915@gmail.com")) || 
-    isDemoMode || 
-    userIdBypass ||
-    (localAdmin !== null && (localAdmin.email === "mdakash136915@gmail.com" || localAdmin.email === settings.adminEmail));
+    (user && user.email === "mdakash136915@gmail.com") || 
+    (localAdmin !== null && localAdmin.email === "mdakash136915@gmail.com");
 
   const handleSaveFeature = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -377,6 +369,111 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     }
   };
 
+  if (!isSuperAdmin) {
+    return (
+      <div className="min-h-screen w-full bg-slate-950 flex flex-col items-center justify-center p-4 sm:p-6 text-slate-200 relative overflow-hidden">
+        {/* Subtle, beautiful design accents */}
+        <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-blue-500/5 blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] rounded-full bg-emerald-500/5 blur-[120px] pointer-events-none" />
+
+        {/* Back to Home Website Action */}
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-10">
+          <button 
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2.5 text-xs bg-slate-900 hover:bg-slate-850 hover:text-white text-slate-300 rounded-xl border border-slate-800 hover:border-slate-700 transition-all flex items-center gap-2 font-medium shadow-md cursor-pointer whitespace-nowrap active:scale-95"
+          >
+            <Icons.Home className="w-3.5 h-3.5 text-blue-400" />
+            <span>Back to Website</span>
+          </button>
+        </div>
+
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.97, y: 12 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="w-full max-w-md bg-slate-900/40 backdrop-blur-xl border border-slate-850 rounded-3xl p-8 sm:p-10 shadow-2xl relative z-10"
+        >
+          <div className="text-center mb-8">
+            <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-4 text-blue-400">
+              <Lock className="w-6 h-6" />
+            </div>
+            <h3 className="text-2xl font-display font-medium text-white tracking-tight">Superadmin Access</h3>
+            <p className="text-slate-400 text-xs mt-1.5 leading-relaxed">Authenticate with administrative credentials below.</p>
+          </div>
+
+          {loginError && (
+            <motion.div 
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-3.5 mb-5 rounded-xl bg-red-500/15 border border-red-500/25 text-xs text-red-400 flex items-start gap-2.5 text-left leading-relaxed"
+            >
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />
+              <span>{loginError}</span>
+            </motion.div>
+          )}
+
+          {/* Email / Password Form */}
+          <form onSubmit={handleEmailLogin} className="space-y-5 text-left">
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">
+                Admin Email Address
+              </label>
+              <input 
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@domain.com"
+                className="w-full bg-slate-950 border border-slate-800/80 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 hover:border-slate-700 focus:ring-1 focus:ring-blue-500/20 transition-all placeholder:text-slate-705"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Security Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-[10px] text-blue-400 hover:text-blue-300 font-bold tracking-wider uppercase cursor-pointer"
+                >
+                  {showPassword ? 'Hide Secret' : 'Show Secret'}
+                </button>
+              </div>
+              <div className="relative">
+                <input 
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-slate-950 border border-slate-800/80 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 hover:border-slate-700 focus:ring-1 focus:ring-blue-500/20 transition-all placeholder:text-slate-705"
+                />
+              </div>
+            </div>
+
+            <button 
+              type="submit"
+              disabled={isLoggingIn}
+              className="w-full mt-2 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-widest transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/15 cursor-pointer disabled:opacity-50 active:scale-98"
+            >
+              {isLoggingIn ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" />
+                  <span>Validating Credentials...</span>
+                </>
+              ) : (
+                <span>Sign In Securely</span>
+              )}
+            </button>
+          </form>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen w-full bg-slate-950 flex flex-col md:flex-row text-slate-200 overflow-hidden relative">
       <AnimatePresence>
@@ -471,47 +568,29 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
             {user || localAdmin ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <img 
-                    src={settings.adminAvatarUrl || user?.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&h=256&auto=format&fit=crop'} 
-                    referrerPolicy="no-referrer"
-                    alt={settings.adminName || user?.displayName || localAdmin?.displayName || 'Admin'} 
-                    className="w-10 h-10 rounded-full border border-blue-500/30 object-cover"
-                  />
+                  <div className="w-10 h-10 rounded-full border border-blue-500/30 bg-slate-900 flex items-center justify-center shrink-0">
+                    <Icons.ShieldCheck className="w-5 h-5 text-blue-400" />
+                  </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-white truncate">{settings.adminName || user?.displayName || localAdmin?.displayName || 'Super Admin'}</p>
-                    <p className="text-slate-505 text-xs truncate">{user?.email || localAdmin?.email}</p>
+                    <p className="text-sm font-semibold text-white truncate">MD. Akash</p>
+                    <p className="text-slate-400 text-xs truncate">mdakash136915@gmail.com</p>
                   </div>
                 </div>
-                {user && user.email !== settings.adminEmail && (
-                  <div className="p-2 gap-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-400 flex items-start">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                    <span>Your Gmail is not standard Superadmin. View is currently restricted unless you enable Demo Bypass mode.</span>
-                  </div>
-                )}
                 <button 
                   onClick={handleSignOut}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900 text-xs transition-colors"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-950 text-xs transition-colors cursor-pointer"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
-                  Disconnect Auth
+                  <LogOut className="w-3.5 h-3.5 text-red-400" />
+                  Close Panel Session
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
-                <p className="text-slate-500 text-xs text-center border-b border-slate-850 pb-2 mb-2">Login below to customize site elements in real time.</p>
-                <div className="text-[11px] text-slate-400 bg-slate-900 p-2.5 rounded-xl border border-slate-850">
-                  <span className="font-semibold text-slate-300 block mb-1">Superadmin credentials:</span>
-                  <div className="font-mono text-[10px] space-y-0.5 text-slate-400">
-                    <div>Email: <span className="text-blue-400 select-all">{settings.adminEmail}</span></div>
-                    <div>Pass: <span className="text-blue-400 select-all">@12a"ak"</span></div>
-                  </div>
+              <div className="space-y-2 text-center p-3.5 rounded-xl bg-slate-950/60 border border-slate-900">
+                <div className="flex items-center justify-center gap-2 text-[11px] font-semibold text-slate-400">
+                  <Lock className="w-3.5 h-3.5 text-amber-500/80" />
+                  <span>Control Panel Locked</span>
                 </div>
-                <button 
-                  onClick={() => setIsDemoMode(!isDemoMode)}
-                  className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-medium transition-all ${isDemoMode ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'border-slate-850 text-slate-400 hover:text-slate-200'}`}
-                >
-                  {isDemoMode ? 'Disable Sandbox Mode' : 'Enable Sandbox Mode (Evaluation)'}
-                </button>
+                <p className="text-[10px] text-slate-500 leading-normal">Authenticate using your admin credentials to unlock options.</p>
               </div>
             )}
           </div>
@@ -539,122 +618,6 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
             </button>
           </div>
 
-          {!isSuperAdmin ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 max-w-lg mx-auto w-full">
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl p-8 shadow-xl"
-              >
-                <div className="text-center mb-6">
-                  <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-                    <Lock className="w-6 h-6 text-emerald-400 animate-pulse" />
-                  </div>
-                  <h3 className="text-2xl font-display font-bold text-white">Superadmin Access</h3>
-                  <p className="text-slate-400 text-xs mt-1">Authenticate to lock/unlock live site customizer fields.</p>
-                </div>
-
-                {loginError && (
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="p-3 mb-4 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400 flex items-start gap-2 text-left"
-                  >
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{loginError}</span>
-                  </motion.div>
-                )}
-
-                {/* Email / Password Form */}
-                <form onSubmit={handleEmailLogin} className="space-y-4 text-left">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider">
-                      Admin Email Address
-                    </label>
-                    <input 
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@domain.com"
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-600"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between items-center mb-1.5">
-                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                        Security Password
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="text-[11px] text-blue-400 hover:text-blue-300 font-medium"
-                      >
-                        {showPassword ? 'Hide Secret' : 'Show Secret'}
-                      </button>
-                    </div>
-                    <div className="relative">
-                      <input 
-                        type={showPassword ? "text" : "password"}
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-600"
-                      />
-                    </div>
-                  </div>
-
-                  <button 
-                    type="submit"
-                    disabled={isLoggingIn}
-                    className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-500/10 transition-all flex items-center justify-center gap-2"
-                  >
-                    {isLoggingIn ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        Validating Identity...
-                      </>
-                    ) : (
-                      'Sign In Securely'
-                    )}
-                  </button>
-                </form>
-
-                <div className="relative flex py-5 items-center">
-                  <div className="flex-grow border-t border-slate-800"></div>
-                  <span className="flex-shrink mx-4 text-[10px] text-slate-500 font-mono uppercase tracking-widest">or continue with</span>
-                  <div className="flex-grow border-t border-slate-800"></div>
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  {/* Google Login Provider */}
-                  <button 
-                    onClick={handleGoogleLogin}
-                    className="w-full flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-white font-medium text-xs transition-colors"
-                  >
-                    <svg className="w-4 h-4 mr-0.5 shrink-0" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.53-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.57-5.17 3.57-8.7c0-.4-.03-.8-.09-1.47z"/>
-                      <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16c-3.11 0-5.74-2.11-6.68-4.96H1.21v3.15C3.18 21.88 7.39 24 12 24z"/>
-                      <path fill="#FBBC05" d="M5.32 14.24c-.24-.72-.38-1.5-.38-2.3c0-.8.14-1.58.38-2.3V6.49H1.21C.44 8.04 0 9.97 0 12c0 2.03.44 3.96 1.21 5.51l4.11-3.27z"/>
-                      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0C7.39 0 3.18 2.12 1.21 5.51l4.11 3.27c.94-2.85 3.57-4.96 6.68-4.96z"/>
-                    </svg>
-                    Authenticate with Google Mail
-                  </button>
-
-                  {/* Sandbox Bypass Mode */}
-                  <button 
-                    onClick={() => setIsDemoMode(true)}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-850 text-slate-400 hover:text-white border border-slate-850 text-xs font-semibold transition-all mt-1"
-                  >
-                    <Eye className="w-3.5 h-3.5 text-blue-400" />
-                    Evaluation Sandbox Mode
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          ) : (
             <div className="p-8 space-y-8 flex-1">
               
               {/* Reset to defaults warning */}
@@ -1885,7 +1848,6 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
               )}
 
             </div>
-          )}
 
         </div>
     </div>
