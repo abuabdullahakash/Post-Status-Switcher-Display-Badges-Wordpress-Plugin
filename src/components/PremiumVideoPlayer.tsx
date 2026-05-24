@@ -1,23 +1,51 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Volume2, VolumeX, Maximize2, SkipBack, SkipForward, ArrowRight, HelpCircle, Youtube, HardDrive, Video } from 'lucide-react';
+import { 
+  Play, 
+  Pause, 
+  RotateCcw, 
+  Volume2, 
+  VolumeX, 
+  Maximize2, 
+  Minimize2,
+  SkipBack, 
+  SkipForward, 
+  ArrowRight, 
+  HelpCircle, 
+  Youtube, 
+  HardDrive, 
+  Video,
+  Gauge,
+  ChevronDown
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface PremiumVideoPlayerProps {
   videoUrl: string;
   title?: string;
+  posterUrl?: string;
 }
 
-export default function PremiumVideoPlayer({ videoUrl, title = "Feature Demo Preview" }: PremiumVideoPlayerProps) {
+export default function PremiumVideoPlayer({ videoUrl, title = "Feature Demo Preview", posterUrl }: PremiumVideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [progress, setProgress] = useState(0); // 0 to 100
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [showStatusBadge, setShowStatusBadge] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  
+  // Custom Controls enhancements
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [isSpeedOpen, setIsSpeedOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  // Transient center screen hud flashes
+  const [flash, setFlash] = useState<{ type: 'play' | 'pause' | 'mute' | 'unmute' | 'speed'; value?: string } | null>(null);
+  const flashTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const progressContainerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const speedMenuRef = useRef<HTMLDivElement>(null);
 
   // Normalize inputs
   const cleanedUrl = (videoUrl || '').trim();
@@ -55,24 +83,48 @@ export default function PremiumVideoPlayer({ videoUrl, title = "Feature Demo Pre
     }
   }
 
-  // Effect to clean up status overlay animations
-  useEffect(() => {
-    if (showStatusBadge) {
-      const timer = setTimeout(() => setShowStatusBadge(null), 1200);
-      return () => clearTimeout(timer);
-    }
-  }, [showStatusBadge]);
+  // Helper to trigger transient central flash HUD
+  const triggerFlash = (type: 'play' | 'pause' | 'mute' | 'unmute' | 'speed', value?: string) => {
+    if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+    setFlash({ type, value });
+    flashTimeoutRef.current = setTimeout(() => {
+      setFlash(null);
+    }, 800);
+  };
 
-  // Toggle Play / Pause (for Native video only)
+  // Close speed menu on clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (speedMenuRef.current && !speedMenuRef.current.contains(e.target as Node)) {
+        setIsSpeedOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+    };
+  }, []);
+
+  // Fullscreen transition change listener
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  // Toggle play/pause
   const handleTogglePlay = () => {
-    if (isYouTube || isDrive) return; // Managed by official embeds
+    if (isYouTube || isDrive) return; // Managed by embed player
     if (videoRef.current) {
       if (isPlaying) {
         videoRef.current.pause();
-        setShowStatusBadge('PAUSE');
       } else {
-        videoRef.current.play().catch(e => console.log('Autoplay blocked: ', e));
-        setShowStatusBadge('PLAY');
+        videoRef.current.play().catch(pErr => console.log('Autoplay blocked:', pErr));
       }
       setIsPlaying(!isPlaying);
     }
@@ -91,24 +143,46 @@ export default function PremiumVideoPlayer({ videoUrl, title = "Feature Demo Pre
       const nextMuted = !isMuted;
       setIsMuted(nextMuted);
       videoRef.current.muted = nextMuted;
-      setShowStatusBadge(nextMuted ? 'MUTED' : 'UNMUTED');
+      triggerFlash(nextMuted ? 'mute' : 'unmute');
     }
   };
 
-  // Fast forward 10 seconds (for Native video)
+  // Fast forward 10 seconds
   const handleFastForward = () => {
     if (videoRef.current) {
       videoRef.current.currentTime = Math.min(videoRef.current.currentTime + 10, videoRef.current.duration);
-      setShowStatusBadge('+10s');
     }
   };
 
-  // Rewind 10 seconds (for Native video)
+  // Rewind 10 seconds
   const handleRewind = () => {
     if (videoRef.current) {
       videoRef.current.currentTime = Math.max(videoRef.current.currentTime - 10, 0);
-      setShowStatusBadge('-10s');
     }
+  };
+
+  // Full Screen action
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().catch(err => {
+        console.error("Error attempting to enable fullscreen:", err);
+      });
+    } else {
+      document.exitFullscreen().catch(err => {
+        console.error("Error attempting to exit fullscreen:", err);
+      });
+    }
+  };
+
+  // Playback rate set
+  const handleSpeedSelect = (rate: number) => {
+    setPlaybackSpeed(rate);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = rate;
+    }
+    setIsSpeedOpen(false);
+    triggerFlash('speed', `${rate}x`);
   };
 
   // HTML5 Video Event Listeners
@@ -125,10 +199,12 @@ export default function PremiumVideoPlayer({ videoUrl, title = "Feature Demo Pre
   const handleVideoLoadedMetadata = () => {
     if (videoRef.current) {
       setDuration(videoRef.current.duration);
+      // Ensure current speed is preserved if metadata reloaded
+      videoRef.current.playbackRate = playbackSpeed;
     }
   };
 
-  // Click on scrubbing track to seek (for Native video)
+  // Click & Drag on progress track to seek
   const handleScrub = (clientX: number) => {
     if (!progressContainerRef.current || !videoRef.current) return;
     const rect = progressContainerRef.current.getBoundingClientRect();
@@ -178,32 +254,72 @@ export default function PremiumVideoPlayer({ videoUrl, title = "Feature Demo Pre
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
+  // Controls Visibility management
+  const [isControlsVisible, setIsControlsVisible] = useState(true);
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const resetControlsTimeout = () => {
+    setIsControlsVisible(true);
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    if (isPlaying && !isDragging && !isSpeedOpen) {
+      controlsTimeoutRef.current = setTimeout(() => {
+        setIsControlsVisible(false);
+      }, 2500);
+    }
+  };
+
+  useEffect(() => {
+    resetControlsTimeout();
+    return () => {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+    };
+  }, [isPlaying, isDragging, isSpeedOpen]);
+
+  const speedOptions = [0.5, 1.0, 1.25, 1.5, 2.0];
+
   return (
-    <div id="premium-custom-player" className="w-full max-w-4xl mx-auto rounded-3xl bg-slate-950 border border-slate-900 overflow-hidden shadow-2xl shadow-blue-500/5 group text-left">
+    <div 
+      ref={containerRef}
+      id="premium-custom-player" 
+      onMouseMove={resetControlsTimeout}
+      onMouseLeave={() => {
+        if (isPlaying && !isDragging && !isSpeedOpen) {
+          setIsControlsVisible(false);
+        }
+      }}
+      className={`w-full max-w-4xl mx-auto rounded-3xl bg-slate-950 border border-slate-900 overflow-hidden shadow-2xl transition-all duration-300 group text-left ${
+        isFullscreen ? 'fixed inset-0 max-w-none z-[9999] rounded-none border-none h-screen flex flex-col justify-between bg-black' : 'relative shadow-blue-500/5'
+      }`}
+    >
       
       {/* Player Display Shield */}
-      <div className="relative aspect-video bg-black/95 flex items-center justify-center overflow-hidden">
+      <div className={`relative bg-black flex items-center justify-center overflow-hidden w-full ${isFullscreen ? 'flex-1' : 'aspect-video'}`}>
         
-        {/* BIG STATUS BADGE NOTIFICATION (HTML5 Native Only) */}
-        {!(isYouTube || isDrive) && (
-          <AnimatePresence>
-            {showStatusBadge && (
-              <motion.div 
-                initial={{ scale: 0.6, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.8, opacity: 0 }}
-                className="absolute z-30 pointer-events-none px-6 py-3 rounded-full bg-slate-950/90 text-white border border-slate-800 text-xs font-bold tracking-widest uppercase flex items-center gap-2 shadow-2xl shadow-black"
-              >
-                {showStatusBadge === 'PLAY' && <Play className="w-4 h-4 text-emerald-400 fill-emerald-400" />}
-                {showStatusBadge === 'PAUSE' && <Pause className="w-4 h-4 text-amber-400 fill-amber-400" />}
-                {showStatusBadge === 'MUTED' && <VolumeX className="w-4 h-4 text-red-400" />}
-                {showStatusBadge === 'UNMUTED' && <Volume2 className="w-4 h-4 text-emerald-400" />}
-                {['+10s', '-10s'].includes(showStatusBadge) && <SkipForward className="w-4 h-4 text-blue-400" />}
-                <span>{showStatusBadge}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        )}
+        {/* TRANSIENT FLOATING HUD FLASH NOTIFICATIONS (Elegant Minimalist Icons without overlapping text) */}
+        <AnimatePresence>
+          {flash && (
+            <motion.div 
+              key={`${flash.type}-${flash.value || ''}`}
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="absolute z-40 pointer-events-none p-5 rounded-full bg-slate-950/85 text-white border border-slate-800 shadow-2xl backdrop-blur-md flex items-center justify-center w-16 h-16"
+            >
+              {flash.type === 'play' && <Play className="w-6 h-6 text-emerald-400 fill-emerald-400" />}
+              {flash.type === 'pause' && <Pause className="w-6 h-6 text-indigo-400 fill-indigo-400" />}
+              {flash.type === 'mute' && <VolumeX className="w-6 h-6 text-red-400" />}
+              {flash.type === 'unmute' && <Volume2 className="w-6 h-6 text-emerald-400" />}
+              {flash.type === 'speed' && (
+                <span className="text-sm font-mono font-bold text-blue-400">{flash.value}</span>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* CLICKBOARD BOARD FOR NATIVE PLAYBACK GESTURES */}
         {!(isYouTube || isDrive) && (
@@ -240,6 +356,7 @@ export default function PremiumVideoPlayer({ videoUrl, title = "Feature Demo Pre
           <video
             ref={videoRef}
             src={cleanedUrl}
+            poster={posterUrl}
             className="w-full h-full object-contain z-10"
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={handleVideoLoadedMetadata}
@@ -254,138 +371,181 @@ export default function PremiumVideoPlayer({ videoUrl, title = "Feature Demo Pre
           </div>
         )}
 
-        {/* OVERLAYS WHILE IDLE (Native Video Only) */}
+        {/* GORGEOUS GENTLE GLASS PLAY OVERLAY (Only when paused & direct video exists) */}
         {!(isYouTube || isDrive) && !isPlaying && cleanedUrl && (
-          <div className="absolute inset-0 z-15 bg-black/40 backdrop-blur-[2px] transition-all flex items-center justify-center pointer-events-none">
-            <div className="p-5 rounded-full bg-blue-600/90 text-white shadow-xl shadow-blue-500/20 scale-100 group-hover:scale-110 transition-transform">
-              <Play className="w-8 h-8 fill-white translate-x-0.5" />
-            </div>
-            <div className="absolute bottom-4 left-4 px-3 py-1 rounded bg-slate-950/80 border border-slate-900 text-[10px] text-slate-400 uppercase tracking-widest font-bold">
-              Immersive Custom Video Engine
-            </div>
+          <div className="absolute inset-0 z-25 bg-black/20 transition-all flex items-center justify-center pointer-events-none">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.2 }}
+              className="p-4 rounded-full bg-slate-900/60 backdrop-blur-md border border-white/10 shadow-2xl flex items-center justify-center"
+            >
+              <div className="p-3.5 rounded-full bg-blue-600 text-white shadow-lg transition-all">
+                <Play className="w-6 h-6 fill-white translate-x-0.5" />
+              </div>
+            </motion.div>
           </div>
         )}
-      </div>
 
-      {/* CORE CONTROL DECK BAR */}
-      <div className="p-4 bg-slate-950 border-t border-slate-900 space-y-3 relative z-30">
-        
-        {isYouTube && youtubeId ? (
-          /* Sleek Footer Banner for YouTube Broadcast */
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-red-600/10 border border-red-500/20 text-red-400">
-                <Youtube className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-xs font-semibold text-slate-200 block">YouTube Public Broadcast Stream</span>
-                <span className="text-[10px] text-slate-500">Enhanced full interactions loaded dynamically. Supports YouTube native controls.</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-[10px] font-medium text-slate-450 uppercase tracking-wider">
-                Active External Sync
-              </span>
-            </div>
-          </div>
-        ) : isDrive && driveId ? (
-          /* Sleek Footer Banner for Google Drive Streaming */
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-indigo-600/10 border border-indigo-500/20 text-indigo-400">
-                <HardDrive className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-xs font-semibold text-slate-200 block">Google Cloud Drive Video Feed</span>
-                <span className="text-[10px] text-slate-500 font-sans">Full security-scanned streaming bypasses disk read limits. Make sure your Drive file is set to public.</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="px-3 py-1 rounded-full bg-indigo-605/10 border border-indigo-505/20 text-[10px] font-medium text-indigo-400 uppercase tracking-wider">
-                Drive Cloud Source
-              </span>
-            </div>
-          </div>
-        ) : (
-          /* PREMIUM NATIVE HTML5 DRAGGABLE PROGRESS TRACKER */
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] font-mono text-slate-500 w-10 text-right">{formatTime(currentTime)}</span>
-              
-              <div 
-                ref={progressContainerRef}
-                onMouseDown={handleMouseDownScrub}
-                className="flex-1 h-2 relative rounded-full bg-slate-900 hover:bg-slate-850 cursor-pointer transition-all duration-300 group/scrub"
-              >
-                {/* Visual Fill Track */}
-                <div 
-                  className="absolute left-0 top-0 bottom-0 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 shadow-md shadow-blue-500/20"
-                  style={{ width: `${progress}%` }}
-                />
-                {/* Visual Draggable Thumb Head */}
-                <div 
-                  className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white border border-blue-500 shadow-xl transition-transform scale-0 group-hover/scrub:scale-100"
-                  style={{ left: `calc(${progress}% - 7px)` }}
-                />
-              </div>
-
-              <span className="text-[10px] font-mono text-slate-500 w-10">{formatTime(duration)}</span>
-            </div>
-
-            {/* BUTTON ACTION CONTAINER */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
-              <div className="flex items-center gap-3.5">
-                <button
-                  onClick={handleTogglePlay}
-                  className="p-2.5 rounded-xl bg-slate-900 border border-slate-850 text-white hover:bg-blue-600 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/15 transition-all cursor-pointer"
-                  title={isPlaying ? "Pause" : "Play"}
-                >
-                  {isPlaying ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white translate-x-0.5" />}
-                </button>
-
-                {/* REWIND 10S */}
-                <button
-                  onClick={handleRewind}
-                  className="p-2 rounded-lg bg-slate-950 hover:bg-slate-900 text-slate-400 hover:text-white transition-all cursor-pointer"
-                  title="Rewind 10 Seconds"
-                >
-                  <SkipBack className="w-3.5 h-3.5" />
-                </button>
-
-                {/* FAST FORWARD 10S */}
-                <button
-                  onClick={handleFastForward}
-                  className="p-2 rounded-lg bg-slate-950 hover:bg-slate-900 text-slate-400 hover:text-white transition-all cursor-pointer"
-                  title="Fast Forward 10 Seconds"
-                >
-                  <SkipForward className="w-3.5 h-3.5" />
-                </button>
-                
-                {/* SOUND TOGGLE */}
-                <button
-                  onClick={toggleMute}
-                  className={`p-2 rounded-lg transition-all cursor-pointer ${isMuted ? 'text-red-400 hover:text-red-300' : 'text-slate-400 hover:text-white'}`}
-                  title={isMuted ? "Unmute Audio" : "Mute Audio (Double click video screen to also toggle)"}
-                >
-                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between sm:justify-end gap-3">
-                <div className="text-[10px] font-sans text-slate-500 leading-snug">
-                  <span className="font-semibold text-slate-300 uppercase block tracking-wide">Custom HTML5 Direct Playback</span>
-                  Double-click screen to mute
+        {/* CORE CONTROL DECK BAR OVERLAYED */}
+        {!(isYouTube && youtubeId) && (
+          <div 
+            className={`absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-slate-950/95 via-slate-950/70 to-transparent space-y-3 z-30 transition-all duration-350 transform ${
+              isControlsVisible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-3 pointer-events-none'
+            }`}
+          >
+            
+            {isDrive && driveId ? (
+              /* Sleek Footer Banner for Google Drive Streaming */
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-indigo-600/20 border border-indigo-500/20 text-indigo-400 backdrop-blur-sm">
+                    <HardDrive className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-slate-200 block">Google Cloud Drive Video Feed</span>
+                    <span className="text-[10px] text-slate-400 font-sans">Full security-scanned streaming bypasses disk read limits. Make sure your Drive file is set to public.</span>
+                  </div>
                 </div>
-                
-                <span className="px-2.5 py-1 rounded bg-slate-900/40 border border-slate-900 text-[10px] font-mono text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <Video className="w-3 h-3 text-emerald-400" /> Direct File
-                </span>
+                <div className="flex items-center gap-3 self-end sm:self-center">
+                  <span className="px-3 py-1 rounded-full bg-indigo-650/40 border border-indigo-500/20 text-[10px] font-medium text-indigo-450 uppercase tracking-wider text-indigo-300">
+                    Drive Cloud Source
+                  </span>
+                  <button
+                    onClick={toggleFullscreen}
+                    className="p-2 rounded-lg bg-slate-900 border border-slate-850 text-slate-300 hover:text-white transition-all cursor-pointer hover:bg-slate-850"
+                    title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                  >
+                    {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              /* PREMIUM NATIVE HTML5 DRAGGABLE PROGRESS TRACKER */
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-mono font-bold text-slate-300 w-10 text-right select-none">{formatTime(currentTime)}</span>
+                  
+                  <div 
+                    ref={progressContainerRef}
+                    onMouseDown={handleMouseDownScrub}
+                    className="flex-1 h-1.5 relative rounded-full bg-white/20 hover:bg-white/35 cursor-pointer transition-all duration-300 group/scrub"
+                  >
+                    {/* Visual Fill Track */}
+                    <div 
+                      className="absolute left-0 top-0 bottom-0 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 shadow-md shadow-blue-500/20"
+                      style={{ width: `${progress}%` }}
+                    />
+                    {/* Visual Draggable Thumb Head */}
+                    <div 
+                      className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white border border-blue-500 shadow-xl transition-transform scale-0 group-hover/scrub:scale-100"
+                      style={{ left: `calc(${progress}% - 7px)` }}
+                    />
+                  </div>
+
+                  <span className="text-[10px] font-mono font-bold text-slate-300 w-10 select-none">{formatTime(duration)}</span>
+                </div>
+
+                {/* BUTTON ACTION CONTAINER */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-1">
+                  <div className="flex items-center flex-wrap gap-2.5 animate-fade-in">
+                    <button
+                      onClick={handleTogglePlay}
+                      className="p-2.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-800 text-white hover:bg-blue-600 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/15 transition-all cursor-pointer"
+                      title={isPlaying ? "Pause" : "Play"}
+                    >
+                      {isPlaying ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white translate-x-0.5" />}
+                    </button>
+
+                    {/* REWIND 10S */}
+                    <button
+                      onClick={handleRewind}
+                      className="p-2 rounded-lg bg-slate-900/60 backdrop-blur-md hover:bg-slate-800/80 border border-slate-800/40 text-slate-300 hover:text-white transition-all cursor-pointer"
+                      title="Rewind 10 Seconds"
+                    >
+                      <SkipBack className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* FAST FORWARD 10S */}
+                    <button
+                      onClick={handleFastForward}
+                      className="p-2 rounded-lg bg-slate-900/60 backdrop-blur-md hover:bg-slate-800/80 border border-slate-800/40 text-slate-300 hover:text-white transition-all cursor-pointer"
+                      title="Fast Forward 10 Seconds"
+                    >
+                      <SkipForward className="w-3.5 h-3.5" />
+                    </button>
+                    
+                    {/* SOUND TOGGLE */}
+                    <button
+                      onClick={toggleMute}
+                      className={`p-2 rounded-lg transition-all cursor-pointer ${isMuted ? 'text-red-400 hover:text-red-300' : 'text-slate-300 hover:text-white'}`}
+                      title={isMuted ? "Unmute Audio" : "Mute Audio"}
+                    >
+                      {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                    </button>
+
+                    <div className="h-4 w-px bg-white/10 mx-1" />
+                    {/* PLAYBACK SPEED SELECTION POPUP MENU */}
+                    <div className="relative" ref={speedMenuRef}>
+                      <button
+                        onClick={() => setIsSpeedOpen(!isSpeedOpen)}
+                        className="px-2.5 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 backdrop-blur-md text-xs font-semibold text-slate-300 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+                        title="Playback Speed Selector"
+                      >
+                        <Gauge className="w-3.5 h-3.5 text-blue-400" />
+                        <span>{playbackSpeed === 1.0 ? 'Normal' : `${playbackSpeed}x`}</span>
+                        <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform ${isSpeedOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      <AnimatePresence>
+                        {isSpeedOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute bottom-full left-0 mb-2 py-1.5 w-32 rounded-xl bg-slate-900/95 border border-slate-800 shadow-2xl z-50 overflow-hidden backdrop-blur-md"
+                          >
+                            <div className="px-2.5 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-850 mb-1 select-none">
+                              Play Speed
+                            </div>
+                            {speedOptions.map((rate) => (
+                              <button
+                                key={rate}
+                                onClick={() => handleSpeedSelect(rate)}
+                                className={`w-full px-3 py-1.5 text-left text-xs font-medium cursor-pointer flex items-center justify-between transition-all ${
+                                  playbackSpeed === rate ? 'text-blue-400 font-bold bg-slate-800' : 'text-slate-300 hover:bg-slate-750'
+                                }`}
+                              >
+                                <span>{rate === 1.0 ? '1.0x (Normal)' : `${rate}x`}</span>
+                                {playbackSpeed === rate && <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
+                              </button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                  </div>
+
+                  <div className="flex items-center gap-3 ml-auto self-end">
+                    {/* FULLSCREEN TRIGGER TOGGLE */}
+                    <button
+                      onClick={toggleFullscreen}
+                      className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 backdrop-blur-md text-slate-300 hover:text-white transition-all cursor-pointer hover:bg-slate-800"
+                      title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                    >
+                      {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
-
       </div>
+
     </div>
   );
 }

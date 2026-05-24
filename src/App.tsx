@@ -68,7 +68,7 @@ export default function App() {
         <AdminDashboard onClose={handleCloseAdmin} />
       ) : (
         <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-blue-500/30 selection:text-blue-200">
-          <Navbar />
+          <Navbar onOpenAdmin={handleOpenAdmin} />
           <main>
             {selectedFeatureId ? (
               <SingleFeaturePage 

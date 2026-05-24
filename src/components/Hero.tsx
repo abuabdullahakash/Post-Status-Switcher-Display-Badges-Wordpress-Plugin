@@ -1,19 +1,30 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, Play, CheckCircle2, RefreshCw } from 'lucide-react';
+import { ArrowRight, Play, CheckCircle2, RefreshCw, ArrowDownToLine } from 'lucide-react';
 import { useData } from '../context/DataContext';
 
 export default function Hero() {
-  const { settings } = useData();
+  const { settings, incrementDownload } = useData();
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadClick = () => {
+    if (downloading) return;
+    setDownloading(true);
+    incrementDownload();
+    setTimeout(() => {
+      setDownloading(false);
+    }, 3000);
+  };
 
   return (
     <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
       {/* Background Glows */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-full pointer-events-none">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1320px] h-full pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-[120px] mix-blend-screen" />
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-emerald-500/20 rounded-full blur-[120px] mix-blend-screen" />
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative max-w-[1320px] mx-auto px-[15px] sm:px-[20px] lg:px-[40px]">
         <div className="text-center max-w-4xl mx-auto mb-16">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -48,15 +59,32 @@ export default function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-sm sm:max-w-none mx-auto px-4 sm:px-0"
           >
-            <a href="#pricing" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center justify-center gap-2 transition-all shadow-[0_0_30px_rgba(59,130,246,0.3)] hover:shadow-[0_0_40px_rgba(59,130,246,0.5)] cursor-pointer">
-              Get Started
-              <ArrowRight className="w-5 h-5" />
-            </a>
-            <a href="#features" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium flex items-center justify-center gap-2 transition-all border border-slate-700 hover:border-slate-600 cursor-pointer">
-              <Play className="w-5 h-5" />
-              Explore Features
+            <button 
+              onClick={handleDownloadClick}
+              className={`w-full sm:w-auto px-5 py-3 sm:px-8 sm:py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all cursor-pointer select-none text-xs sm:text-sm uppercase tracking-wider ${
+                downloading 
+                  ? 'bg-emerald-500 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.4)]' 
+                  : 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.2)] hover:shadow-[0_0_30px_rgba(59,130,246,0.4)]'
+              }`}
+            >
+              <ArrowDownToLine className={`w-4 h-4 sm:w-5 sm:h-5 ${downloading ? 'animate-bounce' : ''}`} />
+              <span>{downloading ? "Downloading... ✅" : "Download Plugin"}</span>
+            </button>
+            <a 
+              href="#features" 
+              onClick={(e) => {
+                e.preventDefault();
+                const featuresEl = document.getElementById('features');
+                if (featuresEl) {
+                  featuresEl.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              className="w-full sm:w-auto px-5 py-3 sm:px-8 sm:py-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium flex items-center justify-center gap-2 transition-all border border-slate-700 hover:border-slate-600 cursor-pointer text-xs sm:text-sm"
+            >
+              <Play className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span>Explore Features</span>
             </a>
           </motion.div>
         </div>

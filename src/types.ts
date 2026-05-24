@@ -28,6 +28,10 @@ export interface Feature {
   realWorldCase3Desc?: string;
   realWorldCase3Tag?: string;
   videoUrl?: string;
+  videoPoster?: string;
+  gallery?: string[];
+  galleryCaptions?: string[];
+  tutorialVideos?: { id: string; url: string; title: string; poster?: string }[];
 }
 
 export interface PricingPlan {

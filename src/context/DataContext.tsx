@@ -62,6 +62,8 @@ interface DataContextType {
   settings: SiteSettings;
   loading: boolean;
   isBootstrapping: boolean;
+  downloadsCount: number;
+  visitsCount: number;
   updateFeature: (feature: Feature) => Promise<void>;
   addFeature: (feature: Omit<Feature, 'id'>) => Promise<void>;
   deleteFeature: (id: string) => Promise<void>;
@@ -71,6 +73,8 @@ interface DataContextType {
   updateFAQ: (faq: FAQItem) => Promise<void>;
   deleteFAQ: (id: string) => Promise<void>;
   resetToDefaults: () => Promise<void>;
+  incrementDownload: () => Promise<void>;
+  incrementVisit: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -82,6 +86,43 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [isBootstrapping, setIsBootstrapping] = useState(false);
+
+  // Read starting counts from local storage, fallback to standard numbers
+  const [downloadsCount, setDownloadsCount] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('poststatus_downloads');
+      return saved ? parseInt(saved, 10) : 1248;
+    } catch {
+      return 1248;
+    }
+  });
+  
+  const [visitsCount, setVisitsCount] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('poststatus_visits');
+      return saved ? parseInt(saved, 10) : 3482;
+    } catch {
+      return 3482;
+    }
+  });
+
+  const incrementDownload = async () => {
+    setDownloadsCount((prev) => {
+      const next = prev + 1;
+      localStorage.setItem('poststatus_downloads', String(next));
+      setDoc(doc(db, 'settings', 'stats'), { downloadsCount: next }, { merge: true }).catch(() => {});
+      return next;
+    });
+  };
+
+  const incrementVisit = async () => {
+    setVisitsCount((prev) => {
+      const next = prev + 1;
+      localStorage.setItem('poststatus_visits', String(next));
+      setDoc(doc(db, 'settings', 'stats'), { visitsCount: next }, { merge: true }).catch(() => {});
+      return next;
+    });
+  };
 
   // Check and bootstrap Firestore with initial defaults if empty
   const bootstrapIfNeeded = async () => {
@@ -128,6 +169,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     bootstrapIfNeeded();
+
+    // Increment website visits once per browser session
+    try {
+      const sessionKey = 'poststatus_session_visited';
+      if (!sessionStorage.getItem(sessionKey)) {
+        sessionStorage.setItem(sessionKey, 'true');
+        incrementVisit();
+      }
+    } catch (e) {
+      console.warn("Storage blocker bypassed.");
+    }
 
     // Setup active listeners for each collection
     const unsubFeatures = onSnapshot(
@@ -186,11 +238,32 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
+    const unsubStats = onSnapshot(
+      doc(db, 'settings', 'stats'),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.downloadsCount !== undefined) {
+            setDownloadsCount(data.downloadsCount);
+            localStorage.setItem('poststatus_downloads', String(data.downloadsCount));
+          }
+          if (data.visitsCount !== undefined) {
+            setVisitsCount(data.visitsCount);
+            localStorage.setItem('poststatus_visits', String(data.visitsCount));
+          }
+        }
+      },
+      (error) => {
+        console.warn("Stats document listener offline or unprovisioned. Fallbacks active.");
+      }
+    );
+
     return () => {
       unsubFeatures();
       unsubPricing();
       unsubFaq();
       unsubSettings();
+      unsubStats();
     };
   }, []);
 
@@ -310,6 +383,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       settings,
       loading: loading && !fallbackFeatures.length,
       isBootstrapping,
+      downloadsCount,
+      visitsCount,
       updateFeature,
       addFeature,
       deleteFeature,
@@ -318,7 +393,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       addFAQ,
       updateFAQ,
       deleteFAQ,
-      resetToDefaults
+      resetToDefaults,
+      incrementDownload,
+      incrementVisit
     }}>
       {children}
     </DataContext.Provider>

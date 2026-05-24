@@ -23,6 +23,148 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
   // Find current feature
   const feature = features.find(f => f.id === featureId);
 
+  // Image gallery configurations & default custom fallbacks
+  const fallbackGalleryMap: Record<string, string[]> = {
+    'auto-transition': [
+      "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1200",
+      "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1200",
+      "https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?q=80&w=1200"
+    ],
+    'taxonomy-columns': [
+      "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?q=80&w=1200",
+      "https://images.unsplash.com/photo-1542744094-3a31f103e35f?q=80&w=1200",
+      "https://images.unsplash.com/photo-1581291518655-9523c932dedf?q=80&w=1200"
+    ],
+    'stock-status': [
+      "https://images.unsplash.com/photo-1472851294608-062f824d296e?q=80&w=1200",
+      "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1200",
+      "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=1200"
+    ]
+  };
+
+  const defaultFallbacks = [
+    "https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=1200",
+    "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?q=80&w=1200",
+    "https://images.unsplash.com/photo-1542744094-3a31f103e35f?q=80&w=1200",
+    "https://images.unsplash.com/photo-1581291518655-9523c932dedf?q=80&w=1200"
+  ];
+
+  const galleryImages = (feature?.gallery && feature.gallery.length > 0) 
+    ? feature.gallery 
+    : (fallbackGalleryMap[feature?.id || ''] || defaultFallbacks);
+
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [activeTutorialIndex, setActiveTutorialIndex] = useState(0);
+
+  // Prevent background scroll when lightbox or video player opens
+  useEffect(() => {
+    if (isLightboxOpen || isTutorialOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isLightboxOpen, isTutorialOpen]);
+
+  // Gallery captions getter
+  const getGalleryCaption = (index: number) => {
+    if (feature?.galleryCaptions && feature.galleryCaptions[index]) {
+      return {
+        title: feature.galleryCaptions[index],
+        desc: "Live dashboard screenshot showing optimized backend table layouts and status badge rendering."
+      };
+    }
+    const defaultCaptions: Record<string, { title: string; desc: string }[]> = {
+      'auto-transition': [
+        { title: "Status Transition Rules Interface", desc: "Define precise time-based scheduling rules with ease." },
+        { title: "Database Sync Logger Dashboard", desc: "Audit real-time database transitions and timing executions safely." },
+        { title: "Dynamic Countdown Badges", desc: "Visualize ticking deadlines directly inside Gutenberg blocks." }
+      ],
+      'taxonomy-columns': [
+        { title: "Admin Column Setup Control", desc: "Select which CPT tables map taxonomy attributes dynamically." },
+        { title: "Faceted Taxonomy Sorting Filter", desc: "Filter items using interactive taxonomies without page updates." },
+        { title: "Visual Badge Palette Customizer", desc: "Design bespoke colors, spacing, and typography weights for badging." }
+      ],
+      'stock-status': [
+        { title: "WooCommerce Availability Sync", desc: "Connect standard inventory stock levels directly with visual cues." },
+        { title: "Custom Out-of-Stock Forms", desc: "Increase lead captures by displaying email forms when products are sold out." },
+        { title: "Dynamic Card Badge Options", desc: "Configure how product cards render sale tags dynamically." }
+      ]
+    };
+    const list = defaultCaptions[feature?.id || ''] || [
+      { title: "General Configuration Settings", desc: "Flexible dashboard layout displaying custom options and status toggle parameters." },
+      { title: "Shortcode Generator Panel", desc: "Quick copy and paste generated template codes with responsive presets." },
+      { title: "Advanced Conditional Visibility Gates", desc: "Limit dynamic visibility criteria and roles for private content areas." },
+      { title: "Sleek Responsive Mobile Viewport", desc: "Pixel-perfect touch experiences optimizing badge scales on mobile devices." }
+    ];
+    return list[index % list.length];
+  };
+
+  // Video tutorial playlists builder
+  const getTutorialVideos = () => {
+    const baseVideo = feature?.videoUrl || "https://assets.mixkit.co/videos/preview/mixkit-web-development-code-on-a-screen-closeup-42240-large.mp4";
+    const basePoster = feature?.videoPoster || "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1200";
+
+    const customList = feature?.tutorialVideos || [];
+    if (customList.length > 0) {
+      return customList;
+    }
+
+    return [
+      {
+        id: "intro-guide",
+        title: "1. Core Overview & Walkthrough",
+        url: baseVideo,
+        poster: basePoster,
+        duration: "2:44",
+        desc: "Learn standard settings and see how to easily render fields in custom templates."
+      },
+      {
+        id: "admin-setup",
+        title: "2. Setting Up Backend Admin Columns",
+        url: "https://assets.mixkit.co/videos/preview/mixkit-software-developer-hands-typing-on-keyboard-41315-large.mp4",
+        poster: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1200",
+        duration: "3:10",
+        desc: "Mapping custom fields, creating grid tables, and sorting terms with AJAX filters."
+      },
+      {
+        id: "advanced-rules",
+        title: "3. Advanced Dynamic Visibility Gates",
+        url: "https://assets.mixkit.co/videos/preview/mixkit-spinning-metallic-gear-mechanism-close-up-42721-large.mp4",
+        poster: "https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?q=80&w=1200",
+        duration: "4:05",
+        desc: "Build private visibility criteria rules to hide badges and locks elements behind membership parameters."
+      }
+    ];
+  };
+
+  const tutorialPlaylist = getTutorialVideos();
+
+  // Navigation functions for lightbox
+  const handleLightboxNext = () => {
+    setLightboxIndex(prev => (prev + 1) % galleryImages.length);
+  };
+
+  const handleLightboxPrev = () => {
+    setLightboxIndex(prev => (prev - 1 + galleryImages.length) % galleryImages.length);
+  };
+
+  // Keyboard navigation for Lightbox
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isLightboxOpen) return;
+      if (e.key === 'Escape') setIsLightboxOpen(false);
+      if (e.key === 'ArrowRight') handleLightboxNext();
+      if (e.key === 'ArrowLeft') handleLightboxPrev();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLightboxOpen, lightboxIndex, galleryImages.length]);
+
   // States for interactive sandbox simulators
   // Features have different states
   const [sandboxBoolean, setSandboxBoolean] = useState(true);
@@ -673,133 +815,201 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
   };
 
   return (
-    <div ref={topRef} className="min-h-screen bg-slate-950 text-slate-200 pt-32 pb-24 md:pt-36 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto space-y-16">
+    <div ref={topRef} className="min-h-screen bg-slate-950 text-slate-300 pt-28 pb-20 md:pt-36 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      
+      {/* Dynamic atmospheric radial background glow specific to the feature's color theme */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1320px] h-[600px] bg-gradient-to-b from-blue-500/5 via-transparent to-transparent blur-3xl rounded-full opacity-30 pointer-events-none" />
+
+      <div className="max-w-[1320px] mx-auto space-y-12 relative z-10">
         
         {/* Navigation Breadcrumb / Top Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-900 pb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.03] pb-6">
           <button 
             onClick={onBack}
-            className="group flex items-center gap-2 text-slate-400 hover:text-white transition-all text-sm font-semibold uppercase tracking-wider cursor-pointer"
+            className="group flex items-center gap-2 text-slate-400 hover:text-slate-200 transition-all text-xs font-bold uppercase tracking-wider cursor-pointer font-sans"
           >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1.5 transition-transform text-blue-400" />
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform text-blue-400/80" />
             <span>Back to features overview</span>
           </button>
 
           <span className="text-xs font-mono text-slate-400 flex items-center gap-2">
             <span>WP Plugin Showcase</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-slate-300 uppercase font-bold tracking-wider">Verified Safe</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 shadow-[0_0_10px_rgba(16,185,129,0.4)] animate-pulse"></span>
+            <span className="text-slate-300 uppercase font-bold tracking-wider">Verified Live</span>
           </span>
         </div>
+
+        {/* ========================================================= */}
+        {/* GLORIOUS FULL-WIDTH HERO SECTION (REFINED STYLING) */}
+        {/* ========================================================= */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="relative bg-slate-900/10 backdrop-blur-md border border-slate-900/60 rounded-3xl p-4 sm:p-8 md:p-12 overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.5)] space-y-8"
+        >
+          {/* Ambient mesh lighting lamps */}
+          <div className="absolute -right-24 -top-24 w-96 h-96 bg-blue-600/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -left-24 -bottom-24 w-96 h-96 bg-indigo-600/5 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-8 relative z-10">
+            {/* Title & Description Column */}
+            <div className="space-y-6 max-w-3xl text-left flex-1">
+              <div className="flex items-center gap-2 w-fit px-3 py-1 bg-blue-500/5 border border-blue-500/10 rounded-full text-[9px] font-mono font-bold uppercase tracking-widest text-blue-400/90">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500/80 animate-spin-slow" />
+                <span>Feature Spotlight Panel</span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                <div className={`p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br ${feature.color} shadow-xl text-white shrink-0`}>
+                  <IconComponent className="w-7 h-7 sm:w-10 sm:h-10 md:w-12 md:h-12" />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-black text-slate-100 tracking-tight leading-tight">
+                    {feature.title}
+                  </h1>
+                  <span className="text-[10px] sm:text-xs font-mono text-slate-400 font-bold uppercase tracking-wider block mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <span className="px-2 py-0.5 rounded bg-slate-950/45 font-mono text-indigo-400/90 border border-slate-900/60">Namespace: JET_ENGINE</span>
+                    <span className="hidden sm:inline">•</span>
+                    <span className="text-emerald-400/90 bg-slate-950/45 px-2 py-0.5 rounded sm:bg-transparent sm:p-0 border border-slate-900/60 sm:border-transparent">Stable v2.1.4</span>
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-slate-300 text-base md:text-lg leading-relaxed font-light max-w-2xl pt-2">
+                {feature.description}
+              </p>
+              
+              {/* Fine details to boost readability */}
+              <div className="flex flex-wrap items-center gap-6 text-slate-450 text-[10px] font-mono font-bold uppercase tracking-wider">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500/70" />
+                  <span>Elementor Pro compatible</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500/70" />
+                  <span>Gutenberg blocks</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500/70" />
+                  <span>WPML Multilingual</span>
+                </div>
+              </div>
+            </div>
+
+            {/* CTA action buttons neatly integrated in hero */}
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-3.5 w-full lg:w-fit shrink-0 lg:min-w-[260px]">
+              <button 
+                onClick={() => setIsTutorialOpen(true)}
+                className="flex-1 px-6 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-500/10 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Play className="w-4 h-4 text-emerald-300 animate-pulse fill-emerald-300" /> Watch Setup Guides
+              </button>
+              <button 
+                onClick={() => scrollToId('live-image-gallery')}
+                className="flex-1 px-6 py-4 rounded-2xl bg-slate-900/60 hover:bg-slate-900 hover:text-white text-slate-300 border border-slate-900/80 hover:border-slate-800 transition-all text-xs font-bold uppercase tracking-widest cursor-pointer font-sans"
+              >
+                View Feature Gallery
+              </button>
+            </div>
+          </div>
+
+          {/* 4 Capability Badges - full width inside the gorgeous hero module */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-6 border-t border-slate-900/80">
+            {[
+              { label: "Standalone Badge", icon: "📌", desc: "Shortcode & blocks support" },
+              { label: "Display Badge", icon: "🏷️", desc: "Dynamic metadata tags" },
+              { label: "Frontend Filter", icon: "🔍", desc: "JetSmartFilters AJAX search" },
+              { label: "Dynamic Visibility", icon: "👁️", desc: "Render loop rules & gates" }
+            ].map((badg, idx) => (
+              <div key={idx} className="p-4 rounded-xl bg-slate-950/25 border border-slate-900/80 text-left hover:border-slate-800 hover:bg-slate-900/20 hover:shadow-[0_8px_24px_rgba(0,0,0,0.3)] transition-all shadow-md group">
+                <span className="text-xl block mb-2 group-hover:scale-110 transition-transform duration-300">{badg.icon}</span>
+                <span className="block text-xs font-semibold text-slate-200 leading-tight mb-1">{badg.label}</span>
+                <span className="text-[11px] text-slate-400 leading-normal">{badg.desc}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
 
         {/* Desktop grid layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* Main content body (8 cols on big, 12 on mobile) */}
           <div className="lg:col-span-8 space-y-16">
-            
-            {/* 1. HERO SECTION */}
-            <motion.div 
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-8"
-            >
-              <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 bg-blue-500/10 border border-blue-500/25 rounded-xl text-blue-400 font-mono text-xs font-bold uppercase tracking-wider">
-                <Sparkles className="w-3.5 h-3.5 animate-spin-slow text-yellow-400" />
-                <span>Feature Spotlight</span>
-              </div>
-              
-              <div className="space-y-4">
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-black text-white tracking-tight flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                  <div className={`self-start sm:self-auto p-3 md:p-4 rounded-2xl bg-gradient-to-br ${feature.color} shadow-xl text-white shrink-0`}>
-                    <IconComponent className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10" />
-                  </div>
-                  <span>{feature.title}</span>
-                </h1>
-                <p className="text-slate-300 text-lg md:text-xl leading-relaxed pt-2 max-w-3xl font-light">
-                  {feature.description}
-                </p>
-              </div>
 
-              {/* 4 Capability Badges */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
-                {[
-                  { label: "Standalone Badge", icon: "📌", desc: "Shortcode & blocks support" },
-                  { label: "Display Badge", icon: "🏷️", desc: "Dynamic metadata tags" },
-                  { label: "Frontend Filter", icon: "🔍", desc: "JetSmartFilters AJAX search" },
-                  { label: "Dynamic Visibility", icon: "👁️", desc: "Render loop rules & gates" }
-                ].map((badg, idx) => (
-                  <div key={idx} className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 text-left hover:border-slate-700 hover:bg-slate-900 transition-all shadow-md">
-                    <span className="text-2xl block mb-3">{badg.icon}</span>
-                    <span className="block text-sm font-bold text-white leading-tight mb-1.5">{badg.label}</span>
-                    <span className="text-xs text-slate-400 leading-normal">{badg.desc}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex flex-wrap gap-4 pt-6 border-t border-slate-900">
-                <button 
-                  onClick={() => scrollToId('live-video-walkthrough')}
-                  className="px-7 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xl shadow-blue-500/15 cursor-pointer flex items-center gap-2"
-                >
-                  <Play className="w-3.5 h-3.5 text-emerald-300" /> Watch Video Walkthrough
-                </button>
-                <button 
-                  onClick={() => scrollToId('live-sandbox-controller')}
-                  className="px-7 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 hover:text-white text-slate-300 border border-slate-800 hover:border-slate-700 transition-all text-xs font-bold uppercase tracking-wider cursor-pointer font-sans"
-                >
-                  Play with Sandbox
-                </button>
-              </div>
-            </motion.div>
-
-            {/* VIDEO SHOWCASE SECTION */}
-            <div id="live-video-walkthrough" className="scroll-mt-24 space-y-6">
+            {/* 1. CUSTOM SCREENSHOT GALLERY SHOWCASE (DYNAMIC EQUAL-SIZED PLOT) */}
+            <div id="live-image-gallery" className="scroll-mt-24 space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-display font-extrabold text-white flex items-center gap-2">
-                    <Video className="w-5 h-5 text-indigo-400 animate-pulse" />
-                    Premium Video Tutorial Showcase
+                  <h2 className="text-xl font-display font-extrabold text-slate-100 flex items-center gap-2">
+                    <Icons.Image className="w-5 h-5 text-blue-450" />
+                    Feature Showcase Gallery
                   </h2>
-                  <p className="text-slate-400 text-sm mt-1">
-                    Watch the {feature?.title || 'Feature'} plugin block operate in actual WordPress workflows. Double-click the screen to toggle audio.
-                  </p>
+                  <p className="text-slate-400 text-sm mt-1">Real-world dashboard layouts and production interfaces. Hover over screenshots for context; click to expand high-fidelity views.</p>
                 </div>
-                <span className="self-start sm:self-center px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-mono text-indigo-400 font-bold uppercase tracking-wider">Dynamic Stream v2.0</span>
-              </div>
-              
-              <div className="bg-slate-900/40 border border-slate-900/80 rounded-3xl p-6 shadow-inner">
-                <PremiumVideoPlayer 
-                  videoUrl={feature?.videoUrl || "https://assets.mixkit.co/videos/preview/mixkit-web-development-code-on-a-screen-closeup-42240-large.mp4"} 
-                  title={feature?.title} 
-                />
-              </div>
-            </div>
-
-            {/* 2. INTERACTIVE VISUAL PREVIEW / DEMO BLOCK */}
-            <div id="live-sandbox-controller" className="scroll-mt-24 space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-display font-extrabold text-white flex items-center gap-2">
-                    <Compass className="w-5 h-5 text-blue-400" />
-                    Interactive Sandbox Playground
-                  </h2>
-                  <p className="text-slate-405 text-sm mt-1">Simulate WordPress custom parameters dynamically in your browser.</p>
-                </div>
-                <span className="self-start sm:self-center px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs font-mono text-blue-400 font-bold uppercase tracking-wider">React Sandbox v1.4</span>
+                <span className="self-start sm:self-center px-4 py-1 rounded-full bg-blue-500/5 border border-blue-500/10 text-xs font-mono text-blue-400/90 font-bold uppercase tracking-wider">{galleryImages.length} Screenshots</span>
               </div>
 
-              <div className="bg-slate-900/40 border border-slate-900/80 rounded-3xl p-8 shadow-inner">
-                {renderVisualSandbox()}
+              <div className="bg-slate-900/10 border border-slate-900/50 rounded-3xl p-6 md:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.3)] backdrop-blur-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
+                  {galleryImages.map((imgUrl, i) => {
+                    const caption = getGalleryCaption(i);
+                    return (
+                      <motion.div
+                        key={`${imgUrl}-${i}`}
+                        initial={{ opacity: 0, y: 15 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.3, delay: i * 0.05 }}
+                        onClick={() => {
+                          setLightboxIndex(i);
+                          setIsLightboxOpen(true);
+                        }}
+                        className="group relative aspect-video rounded-2xl overflow-hidden cursor-pointer bg-slate-950/80 border border-slate-900/70 hover:border-slate-800/60 hover:shadow-[0_12px_32px_rgba(0,0,0,0.6)] transition-all duration-300 shadow-md"
+                      >
+                        {/* Core Image element */}
+                        <img 
+                          src={imgUrl} 
+                          alt={caption.title} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 select-none" 
+                          referrerPolicy="no-referrer"
+                        />
+
+                        {/* Hover Overlay with text and icons */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-5 z-20 text-left">
+                          {/* Upper section with quick tags */}
+                          <div className="flex justify-between items-start">
+                            <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-450 border border-blue-500/20 text-[9px] font-mono font-bold uppercase tracking-wider">
+                              Screenshot #{i + 1}
+                            </span>
+                            <div className="p-1.5 rounded-lg bg-slate-950/80 border border-slate-900 text-slate-350 hover:text-white transition-colors">
+                              <Icons.Maximize2 className="w-3.5 h-3.5" />
+                            </div>
+                          </div>
+
+                          {/* Bottom metadata details */}
+                          <div className="space-y-1 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                            <h3 className="text-xs font-bold text-white tracking-tight">{caption.title}</h3>
+                            <p className="text-[10px] text-slate-300 leading-normal line-clamp-2">
+                              {caption.desc}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Ambient subtle light border overlay */}
+                        <div className="absolute inset-0 border border-white/[0.02] pointer-events-none rounded-2xl group-hover:border-white/[0.05] transition-colors duration-300" />
+                      </motion.div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
             {/* 3. FEATURE CAPABILITIES BREAKDOWN */}
             <div className="space-y-8">
               <div>
-                <h2 className="text-lg font-display font-bold text-white uppercase tracking-wider text-left">Detailed Capabilities Integration</h2>
-                <p className="text-sm text-slate-405 mt-1">Discover key methodologies this package supports straight out of the box.</p>
+                <h2 className="text-lg font-display font-semibold text-slate-200 uppercase tracking-wider text-left">Detailed Capabilities Integration</h2>
+                <p className="text-sm text-slate-450 mt-1">Discover key methodologies this package supports straight out of the box.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
@@ -825,12 +1035,12 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
                     tool: "👁️ RENDER CONDITIONS"
                   }
                 ].map((cap, i) => (
-                  <div key={i} className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800/80 space-y-4 hover:border-slate-700 hover:bg-slate-900 transition-all shadow-md">
+                  <div key={i} className="p-6 rounded-2xl bg-slate-900/15 border border-slate-900/80 space-y-4 hover:border-slate-805 hover:bg-slate-900/25 hover:shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-all shadow-md">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <h4 className="text-base font-bold text-white">{cap.title}</h4>
-                      <span className="self-start sm:self-auto text-xs font-mono text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded border border-blue-500/20 font-bold uppercase tracking-wider">{cap.tool}</span>
+                      <h4 className="text-base font-semibold text-slate-100">{cap.title}</h4>
+                      <span className="self-start sm:self-auto text-[10px] font-mono text-blue-450 bg-blue-950/30 px-2.5 py-1 rounded border border-blue-900/20 font-bold uppercase tracking-wider">{cap.tool}</span>
                     </div>
-                    <p className="text-sm text-slate-300 leading-relaxed">{cap.desc}</p>
+                    <p className="text-sm text-slate-350 leading-relaxed font-light">{cap.desc}</p>
                   </div>
                 ))}
               </div>
@@ -839,20 +1049,20 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
             {/* 4. REAL-WORLD USE CASES */}
             <div className="space-y-8">
               <div>
-                <h2 className="text-lg font-display font-bold text-white uppercase tracking-wider text-left">Real-World Deployments</h2>
-                <p className="text-sm text-slate-405 mt-1">Explore architectural examples of where this exact element operates successfully on live websites.</p>
+                <h2 className="text-lg font-display font-semibold text-slate-200 uppercase tracking-wider text-left">Real-World Deployments</h2>
+                <p className="text-sm text-slate-450 mt-1">Explore architectural examples of where this exact element operates successfully on live websites.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
                 {currentCases.map((cs, idx) => (
-                  <div key={idx} className="p-6 rounded-2xl bg-slate-900/30 border border-slate-850 hover:border-slate-750 hover:bg-slate-900/60 transition-all flex flex-col justify-between shadow-md">
+                  <div key={idx} className="p-6 rounded-2xl bg-slate-900/10 border border-slate-900/60 hover:border-slate-800 hover:bg-slate-900/20 hover:shadow-[0_12px_35px_rgba(0,0,0,0.45)] transition-all flex flex-col justify-between shadow-md">
                     <div className="space-y-3">
-                      <span className="inline-block px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 font-mono text-xs font-bold uppercase tracking-wider">{cs.tag}</span>
-                      <h4 className="text-base font-bold text-white pt-1">{cs.title}</h4>
-                      <span className="text-xs text-slate-400 font-medium block">{cs.subtitle}</span>
-                      <p className="text-sm text-slate-300 leading-relaxed mt-2">{cs.description}</p>
+                      <span className="inline-block px-2.5 py-1 rounded bg-emerald-950/20 text-emerald-400 font-mono text-xs font-bold uppercase tracking-wider">{cs.tag}</span>
+                      <h4 className="text-base font-semibold text-slate-100 pt-1">{cs.title}</h4>
+                      <span className="text-xs text-slate-450 font-medium block">{cs.subtitle}</span>
+                      <p className="text-sm text-slate-350 leading-relaxed mt-2 font-light">{cs.description}</p>
                     </div>
-                    <div className="pt-5 mt-6 border-t border-slate-900 flex items-center justify-between text-xs font-bold text-blue-400 cursor-pointer hover:text-blue-300 transition-colors">
+                    <div className="pt-5 mt-6 border-t border-slate-950/60 flex items-center justify-between text-xs font-bold text-blue-400 cursor-pointer hover:text-blue-300 transition-colors">
                       <span>View live setup</span>
                       <ChevronRight className="w-4 h-4" />
                     </div>
@@ -862,16 +1072,16 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
             </div>
 
             {/* 5. STEP-BY-STEP CONFIGURATION GUIDE */}
-            <div className="bg-slate-900/20 border border-slate-900 rounded-2xl p-8 text-left space-y-8">
+            <div className="bg-slate-900/10 border border-slate-900/60 rounded-2xl p-8 text-left space-y-8 shadow-[0_8px_30px_rgba(0,0,0,0.3)] backdrop-blur-sm">
               <div>
-                <h3 className="text-xl font-display font-extrabold text-white flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-blue-400 animate-spin-slow" />
+                <h3 className="text-xl font-display font-extrabold text-slate-100 flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-blue-450/95 animate-spin-slow" />
                   WordPress Configuration Tutorial
                 </h3>
-                <p className="text-sm text-slate-405 mt-1">Configure no-code dynamic statuses on your WordPress site under 3 minutes.</p>
+                <p className="text-sm text-slate-450 mt-1">Configure no-code dynamic statuses on your WordPress site under 3 minutes.</p>
               </div>
 
-              <div className="relative border-l-2 border-slate-800 ml-4 pl-6 space-y-8">
+              <div className="relative border-l-2 border-slate-900/80 ml-4 pl-6 space-y-8">
                 {[
                   {
                     step: "Step 1: Feature Activation",
@@ -892,11 +1102,11 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
                 ].map((st, i) => (
                   <div key={i} className="relative">
                     {/* Ring indicator */}
-                    <div className="absolute -left-[35px] top-0.5 w-6 h-6 rounded-full bg-slate-950 border-2 border-blue-500 flex items-center justify-center text-xs text-blue-400 font-bold">
+                    <div className="absolute -left-[35px] top-0.5 w-6 h-6 rounded-full bg-slate-950 border border-blue-500/60 text-blue-400 flex items-center justify-center text-xs font-bold shadow-[0_0_10px_rgba(59,130,246,0.15)]">
                       {i + 1}
                     </div>
-                    <h5 className="text-base font-semibold text-white mb-2">{st.step}</h5>
-                    <p className="text-sm text-slate-350 leading-relaxed">{st.desc}</p>
+                    <h5 className="text-base font-semibold text-slate-100 mb-2">{st.step}</h5>
+                    <p className="text-sm text-slate-350 leading-relaxed font-light">{st.desc}</p>
                   </div>
                 ))}
               </div>
@@ -908,25 +1118,25 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
           <div className="lg:col-span-4 space-y-8 text-left">
             
             {/* Sidebar 1: Customer Testimonial Panel */}
-            <div className="p-6 rounded-2xl bg-gradient-to-b from-blue-500/10 to-transparent border border-blue-500/15 relative overflow-hidden shadow-lg">
-              <span className="text-xs font-bold text-blue-400 font-mono block uppercase tracking-wider">Customer Proof</span>
-              <p className="text-sm text-slate-300 italic mt-4 leading-relaxed">
+            <div className="p-6 rounded-2xl bg-blue-950/10 border border-blue-950/30 relative overflow-hidden shadow-lg shadow-black/10">
+              <span className="text-xs font-bold text-blue-400/90 font-mono block uppercase tracking-wider">Customer Proof</span>
+              <p className="text-sm text-slate-355 italic mt-4 leading-relaxed font-light">
                 "{featureTestimonial.quote}"
               </p>
               <div className="flex items-center gap-3 mt-6 pt-4 border-t border-slate-900/60">
-                <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-sm font-bold font-mono text-white shrink-0">
+                <div className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-sm font-bold font-mono text-slate-300 shrink-0">
                   {featureTestimonial.author[0]}
                 </div>
                 <div>
-                  <h6 className="text-sm font-semibold text-white">{featureTestimonial.author}</h6>
-                  <span className="text-xs text-slate-400 font-medium">{featureTestimonial.role}</span>
+                  <h6 className="text-sm font-semibold text-slate-200">{featureTestimonial.author}</h6>
+                  <span className="text-xs text-slate-450 font-medium">{featureTestimonial.role}</span>
                 </div>
               </div>
             </div>
 
             {/* Sidebar 2: Requirements Matrix Table */}
-            <div className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800 space-y-5 shadow-md">
-              <h5 className="text-sm font-bold text-white uppercase tracking-wider">System Compatibility</h5>
+            <div className="p-6 rounded-2xl bg-slate-900/15 border border-slate-900/70 space-y-5 shadow-xl">
+              <h5 className="text-sm font-bold text-slate-200 uppercase tracking-wider">System Compatibility</h5>
               <div className="space-y-4">
                 {[
                   { name: "JetEngine custom post types", status: "Required ✅" },
@@ -934,37 +1144,35 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
                   { name: "WooCommerce Products integrations", status: feature.id === 'stock-status' ? "Compatible (Direct hooks!) ✅" : "Fully Integrated ✅" },
                   { name: "Dynamic visibility triggers", status: "Enabled out of the box ✅" }
                 ].map((req, rid) => (
-                  <div key={rid} className="flex justify-between items-start gap-4 text-sm pb-3 border-b border-slate-900/80 last:border-0 last:pb-0">
-                    <span className="text-slate-300 leading-normal">{req.name}</span>
-                    <span className="text-xs bg-slate-950 border border-slate-800 px-2.5 py-1 rounded text-white shrink-0 font-mono font-medium">{req.status}</span>
+                  <div key={rid} className="flex justify-between items-start gap-4 text-sm pb-3 border-b border-slate-950/55 last:border-0 last:pb-0">
+                    <span className="text-slate-300 leading-normal font-light">{req.name}</span>
+                    <span className="text-xs bg-slate-955/30 border border-slate-900/80 px-2.5 py-1 rounded text-slate-300 shrink-0 font-mono font-medium">{req.status}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Sidebar 3: Signature Features Toggles */}
-            <div className="p-0.5 rounded-2xl bg-gradient-to-r from-blue-500/20 via-transparent to-transparent">
-              <div className="bg-slate-950 p-6 rounded-2xl space-y-5">
-                <h5 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                  Premium Signatures
-                </h5>
-                <ul className="space-y-4 text-sm text-slate-300">
-                  <li className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-emerald-450 shrink-0 mt-0.5" />
-                    <span><strong>Auto Transition Timer:</strong> Keep time logs and trigger post state shifts dynamically.</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-emerald-450 shrink-0 mt-0.5" />
-                    <span><strong>Taxonomy Grid Column:</strong> Quick classifying tags synced directly directly on admin layouts.</span>
-                  </li>
-                </ul>
-              </div>
+            <div className="p-6 rounded-2xl bg-slate-900/10 border border-slate-900/80 space-y-5 shadow-lg shadow-black/20 relative overflow-hidden">
+              <h5 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500/20" />
+                Premium Signatures
+              </h5>
+              <ul className="space-y-4 text-sm text-slate-300">
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-emerald-400/80 shrink-0 mt-0.5" />
+                  <span className="font-light"><strong className="font-semibold text-slate-200">Auto Transition Timer:</strong> Keep time logs and trigger post state shifts dynamically.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-emerald-400/80 shrink-0 mt-0.5" />
+                  <span className="font-light"><strong className="font-semibold text-slate-200">Taxonomy Grid Column:</strong> Quick classifying tags synced directly directly on admin layouts.</span>
+                </li>
+              </ul>
             </div>
 
             {/* Sidebar 4: Related / Suggested Features */}
-            <div className="p-6 rounded-2xl bg-slate-900/50 border border-slate-850 space-y-5 shadow-inner">
-              <h5 className="text-sm font-bold text-white uppercase tracking-wider">Related capabilities</h5>
+            <div className="p-6 rounded-2xl bg-slate-900/10 border border-slate-900/70 space-y-5 shadow-lg shadow-black/25">
+              <h5 className="text-sm font-bold text-slate-200 uppercase tracking-wider">Related capabilities</h5>
               <div className="space-y-3">
                 {relatedFeatures.map((f) => {
                   const SubIcon = (Icons as any)[f.iconName] || Icons.HelpCircle;
@@ -977,13 +1185,13 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
                           topRef.current.scrollIntoView({ behavior: 'smooth' });
                         }
                       }}
-                      className="w-full flex items-center justify-between p-3.5 rounded-xl bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all text-left cursor-pointer group"
+                      className="w-full flex items-center justify-between p-3.5 rounded-xl bg-slate-950/40 hover:bg-slate-900/30 border border-slate-900/80 hover:border-slate-800 hover:shadow-[0_4px_15px_rgba(0,0,0,0.3)] transition-all text-left cursor-pointer group"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className={`p-2 rounded-lg bg-gradient-to-br ${f.color} text-white shrink-0 shadow-sm`}>
                           <SubIcon className="w-4 h-4" />
                         </div>
-                        <span className="text-sm text-slate-300 font-semibold truncate group-hover:text-blue-400 transition-colors">{f.title}</span>
+                        <span className="text-sm text-slate-350 font-semibold truncate group-hover:text-blue-400 transition-colors">{f.title}</span>
                       </div>
                       <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-slate-300 transition-colors" />
                     </button>
@@ -1046,6 +1254,209 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
         </div>
 
       </div>
+
+      {/* GLORIOUS LIGHTBOX PORTAL */}
+      <AnimatePresence>
+        {isLightboxOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[999] bg-slate-950/98 backdrop-blur-xl flex flex-col justify-between p-4 md:p-8 select-none"
+            onClick={() => setIsLightboxOpen(false)}
+          >
+            {/* Top Control Bar */}
+            <div className="flex items-center justify-between gap-4 w-full max-w-7xl mx-auto border-b border-white/5 pb-4 md:pb-6 z-10" onClick={e => e.stopPropagation()}>
+              <div className="text-left">
+                <span className="text-[10px] uppercase font-bold text-blue-400 font-mono tracking-widest block mb-1">Feature Spotlight Gallery</span>
+                <h4 className="text-sm md:text-base font-bold text-white">{getGalleryCaption(lightboxIndex).title}</h4>
+              </div>
+              <button
+                onClick={() => setIsLightboxOpen(false)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-350 hover:text-white text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer shadow-lg"
+              >
+                <span>Close</span>
+                <span className="px-1.5 py-0.5 rounded bg-slate-950 text-[9px] font-mono text-slate-450 border border-slate-850">esc</span>
+              </button>
+            </div>
+
+            {/* Main Stage View */}
+            <div className="flex-1 flex items-center justify-center relative w-full h-full max-w-7xl mx-auto my-4 text-center" onClick={e => e.stopPropagation()}>
+              
+              {/* Prev button */}
+              <button
+                onClick={handleLightboxPrev}
+                className="absolute left-2 md:left-4 z-20 p-3 md:p-4 rounded-full bg-slate-900/60 border border-slate-850 text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer shadow-xl outline-none"
+                title="Previous Image (Left Arrow)"
+              >
+                <Icons.ChevronLeft className="w-5 h-5" />
+              </button>
+
+              {/* Main Active image showcase card with framer animations */}
+              <div className="w-full max-w-5xl h-[55vh] md:h-[65vh] flex items-center justify-center overflow-hidden relative">
+                <AnimatePresence mode="wait">
+                  <motion.img
+                    key={lightboxIndex}
+                    src={galleryImages[lightboxIndex]}
+                    alt={`Active expanded view #${lightboxIndex}`}
+                    className="max-w-full max-h-full object-contain rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-slate-850 select-none"
+                    referrerPolicy="no-referrer"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.03 }}
+                    transition={{ duration: 0.25 }}
+                  />
+                </AnimatePresence>
+              </div>
+
+              {/* Next button */}
+              <button
+                onClick={handleLightboxNext}
+                className="absolute right-2 md:right-4 z-20 p-3 md:p-4 rounded-full bg-slate-900/60 border border-slate-850 text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer shadow-xl outline-none"
+                title="Next Image (Right Arrow)"
+              >
+                <Icons.ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Bottom Caption & Stats Deck */}
+            <div className="w-full max-w-3xl mx-auto text-center space-y-3 z-10 pb-4" onClick={e => e.stopPropagation()}>
+              <span className="px-3 py-1 rounded bg-slate-900 border border-slate-850 text-xs font-mono text-slate-350 tracking-wider inline-block">
+                IMAGE {lightboxIndex + 1} OF {galleryImages.length}
+              </span>
+              <p className="text-xs md:text-sm text-slate-400 italic max-w-xl mx-auto leading-relaxed">
+                "{getGalleryCaption(lightboxIndex).desc}"
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* GLORIOUS MULTI-VIDEO ACADEMY MODAL */}
+      <AnimatePresence>
+        {isTutorialOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[999] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6 md:p-8"
+            onClick={() => setIsTutorialOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.96 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.96 }}
+              transition={{ duration: 0.25 }}
+              className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-6xl h-[85vh] md:h-[80vh] flex flex-col overflow-hidden shadow-2xl relative"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-slate-800 p-5 md:p-6 bg-slate-950/60 backdrop-blur-md">
+                <div className="text-left">
+                  <div className="flex items-center gap-2">
+                    <Icons.Play className="w-4 h-4 text-emerald-450 animate-pulse fill-emerald-450" />
+                    <span className="text-[10px] uppercase font-bold text-emerald-400 font-mono tracking-widest block font-mono">Video Tutorial Academy</span>
+                  </div>
+                  <h3 className="text-sm md:text-base font-black text-white">{feature?.title} Setup Guides</h3>
+                </div>
+                
+                <button
+                  onClick={() => setIsTutorialOpen(false)}
+                  className="flex items-center justify-center p-2 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-850 hover:text-white text-slate-350 transition-all cursor-pointer group"
+                  title="Close Academic Center"
+                >
+                  <Icons.X className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
+                </button>
+              </div>
+
+              {/* Modal Core Split-Screen Body */}
+              <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+                
+                {/* Left side: Video Showcase Theater (8 cols) */}
+                <div className="lg:col-span-8 bg-black/40 p-4 md:p-6 flex flex-col justify-between overflow-y-auto">
+                  <div key={tutorialPlaylist[activeTutorialIndex].url} className="w-full aspect-video rounded-2xl overflow-hidden border border-slate-850 shadow-2xl bg-slate-950">
+                    <PremiumVideoPlayer 
+                      videoUrl={tutorialPlaylist[activeTutorialIndex].url}
+                      title={tutorialPlaylist[activeTutorialIndex].title}
+                      posterUrl={tutorialPlaylist[activeTutorialIndex].poster}
+                    />
+                  </div>
+
+                  {/* Curated Video Title Cards */}
+                  <div className="text-left mt-5 bg-slate-950/40 border border-slate-855 p-4 rounded-xl">
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-mono font-bold uppercase tracking-wider inline-block mb-1.5 font-mono">
+                      Playing Tutorial Episode #{activeTutorialIndex + 1}
+                    </span>
+                    <h4 className="text-base font-bold text-white">{tutorialPlaylist[activeTutorialIndex].title}</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed mt-1 font-medium italic">
+                      "{tutorialPlaylist[activeTutorialIndex].desc}"
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right side: Interactive Playlist Selector (4 cols) */}
+                <div className="lg:col-span-4 border-t lg:border-t-0 lg:border-l border-slate-800 bg-slate-950/60 p-4 md:p-6 flex flex-col overflow-y-auto">
+                  <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-850">
+                    <h5 className="text-xs font-bold text-slate-350 uppercase tracking-wider font-mono flex items-center gap-2 font-mono">
+                      <Icons.List className="w-4 h-4 text-blue-400" />
+                      Playlist ({tutorialPlaylist.length} Guides)
+                    </h5>
+                    <span className="text-[10px] bg-slate-900 border border-slate-800 px-2.5 py-0.5 rounded text-slate-400 font-mono font-medium">Auto-Play Enabled</span>
+                  </div>
+
+                  <div className="space-y-3 flex-1">
+                    {tutorialPlaylist.map((tut, index) => (
+                      <button
+                        key={`${tut.id}-${index}`}
+                        onClick={() => setActiveTutorialIndex(index)}
+                        className={`w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-all duration-300 outline-none select-none cursor-pointer group ${
+                          activeTutorialIndex === index
+                            ? 'bg-blue-600/10 border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.15)]'
+                            : 'bg-slate-900/40 border-slate-850 hover:bg-slate-900/80 hover:border-slate-800'
+                        }`}
+                      >
+                        {/* Thumbnail or Icon */}
+                        <div className="relative w-20 h-12 rounded-lg bg-slate-950 border border-slate-800 overflow-hidden shrink-0 shadow-md">
+                          <img src={tut.poster} alt={tut.title} className="w-full h-full object-cover select-none" referrerPolicy="no-referrer" />
+                          <div className={`absolute inset-0 flex items-center justify-center bg-slate-950/30 transition-opacity ${activeTutorialIndex === index ? 'opacity-0' : 'opacity-100 group-hover:opacity-10'}`}>
+                            <Icons.Play className="w-4 h-4 text-white drop-shadow" />
+                          </div>
+                          
+                          {/* Duration Stamp overlay */}
+                          <div className="absolute bottom-1 right-1 bg-slate-950/80 px-1 py-0.5 text-[8px] font-mono text-white rounded scale-90 border border-white/5 leading-none">
+                            {tut.duration}
+                          </div>
+                        </div>
+
+                        {/* Title and Short descriptions */}
+                        <div className="min-w-0 pr-1 space-y-0.5">
+                          <h6 className={`text-xs font-bold truncate transition-colors leading-snug ${
+                            activeTutorialIndex === index ? 'text-blue-400' : 'text-slate-205 group-hover:text-white'
+                          }`}>
+                            {tut.title}
+                          </h6>
+                          <p className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">
+                            {tut.desc}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Playlist footer */}
+                  <div className="pt-4 mt-4 border-t border-slate-850 text-center text-[10px] font-mono text-slate-500 leading-normal font-mono">
+                    Designed and curated for premium WordPress setup.
+                  </div>
+                </div>
+
+              </div>
+
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

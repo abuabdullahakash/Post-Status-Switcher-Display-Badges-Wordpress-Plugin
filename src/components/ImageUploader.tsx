@@ -43,11 +43,19 @@ export default function ImageUploader({ onUploadSuccess, label, className = "", 
     }
   }, [recentUploads]);
 
-  // Listener to intercept Ctrl+V image pastes
+  // Listener to intercept Ctrl+V image pastes in a scoped manner
   useEffect(() => {
     const handlePasteEvent = (e: ClipboardEvent) => {
-      // Only capture paste if active element is inside our container or we are focused
       if (!e.clipboardData) return;
+      
+      // Strict scope check: only handle the paste if the mouse hover, current target, 
+      // or focused element is inside this specific component's container element
+      const isInside = containerRef.current && (
+        containerRef.current.contains(document.activeElement) ||
+        containerRef.current.contains(e.target as Node)
+      );
+      
+      if (!isInside) return;
       
       const items = e.clipboardData.items;
       for (let i = 0; i < items.length; i++) {

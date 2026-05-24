@@ -9,7 +9,7 @@ export default function FAQ() {
 
   return (
     <section id="faq" className="py-24 bg-slate-900 border-y border-slate-800">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto px-[15px] sm:px-[20px] lg:px-[40px]">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-5xl font-display font-bold mb-6">
             Frequently Asked <span className="text-gradient">Questions</span>
@@ -26,8 +26,8 @@ export default function FAQ() {
             return (
               <div 
                 key={faq.id}
-                className={`border rounded-2xl transition-all duration-300 overflow-hidden ${
-                  isOpen ? 'bg-slate-800/80 border-blue-500/30' : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                className={`border rounded-2xl transition-all duration-300 overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:shadow-[0_12px_45px_rgba(0,0,0,0.65)] ${
+                  isOpen ? 'bg-slate-800/80 border-amber-500/10 shadow-amber-500/5' : 'bg-slate-950 border-slate-900 hover:border-slate-800'
                 }`}
               >
                 <button

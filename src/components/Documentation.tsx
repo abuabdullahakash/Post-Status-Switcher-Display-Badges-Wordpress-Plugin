@@ -98,7 +98,7 @@ export default function Documentation() {
 
   return (
     <section id="docs" className="py-24 bg-slate-900 border-y border-slate-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1320px] mx-auto px-[15px] sm:px-[20px] lg:px-[40px]">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-5xl font-display font-bold mb-6">
             Interactive <span className="text-gradient">Documentation</span>

@@ -12,7 +12,7 @@ export default function Pricing() {
 
   return (
     <section id="pricing" className="py-24 bg-slate-950 relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1320px] mx-auto px-[15px] sm:px-[20px] lg:px-[40px]">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-5xl font-display font-bold mb-6">Choose Your Plan</h2>
           <p className="text-slate-400 text-lg max-w-2xl mx-auto mb-10">
@@ -45,7 +45,7 @@ export default function Pricing() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className={`relative rounded-3xl bg-slate-900 border ${plan.popular ? 'border-blue-500 shadow-[0_0_40px_rgba(59,130,246,0.15)] transform md:-translate-y-4' : 'border-slate-800'} p-8 flex flex-col`}
+              className={`relative rounded-3xl bg-slate-900 border transition-all duration-300 ${plan.popular ? 'border-amber-500/20 shadow-[0_15px_45px_rgba(245,158,11,0.08)] transform md:-translate-y-4' : 'border-slate-900/80 hover:border-slate-800 shadow-[0_8px_32px_rgba(0,0,0,0.55)] hover:shadow-[0_15px_45px_rgba(0,0,0,0.7)]'} p-8 flex flex-col`}
             >
               {plan.popular && (
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
