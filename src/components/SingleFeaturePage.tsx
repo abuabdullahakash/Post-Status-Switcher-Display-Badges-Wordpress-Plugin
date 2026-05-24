@@ -23,6 +23,21 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
   // Find current feature
   const feature = features.find(f => f.id === featureId);
 
+  // If feature does not exist or is pending creation approval, redirect or show error
+  if (!feature || feature.pendingApproval === 'create') {
+    return (
+      <div className="py-32 text-center bg-slate-950 text-white flex flex-col items-center justify-center min-h-screen">
+        <Icons.AlertOctagon className="w-12 h-12 text-rose-500 mb-4 animate-bounce" />
+        <h2 className="text-2xl font-bold font-display tracking-tight text-white mb-2">Feature Not Available</h2>
+        <p className="text-slate-400 text-sm max-w-sm mb-6 leading-relaxed">This feature page is either unpublished or queued for administrative approval by mdakash136915@gmail.com.</p>
+        <button onClick={onBack} className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-lg active:scale-95 flex items-center gap-1.5 cursor-pointer">
+          <Icons.ArrowLeft className="w-4 h-4" />
+          <span>Return to Showcase</span>
+        </button>
+      </div>
+    );
+  }
+
   // Image gallery configurations & default custom fallbacks
   const fallbackGalleryMap: Record<string, string[]> = {
     'auto-transition': [

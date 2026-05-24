@@ -8,8 +8,8 @@ export default function Features() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { features } = useData();
 
-  // Filter active features to display on frontend grid
-  const activeFeatures = features.filter(f => f.active);
+  // Filter active features to display on frontend grid (hide unapproved creations)
+  const activeFeatures = features.filter(f => f.active && f.pendingApproval !== 'create');
 
   return (
     <section id="features" className="py-24 bg-slate-950 relative">

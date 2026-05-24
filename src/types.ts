@@ -32,6 +32,10 @@ export interface Feature {
   gallery?: string[];
   galleryCaptions?: string[];
   tutorialVideos?: { id: string; url: string; title: string; poster?: string }[];
+  
+  // Pending moderation details
+  pendingApproval?: 'create' | 'update' | null;
+  pendingUpdateData?: Partial<Feature> | null;
 }
 
 export interface PricingPlan {

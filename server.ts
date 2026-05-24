@@ -126,6 +126,7 @@ async function startServer() {
       ...(videoPoster && { videoPoster }),
       ...(gallery && { gallery: Array.isArray(gallery) ? gallery : [gallery] }),
       ...(galleryCaptions && { galleryCaptions: Array.isArray(galleryCaptions) ? galleryCaptions : [galleryCaptions] }),
+      pendingApproval: "create",
       updatedAt: new Date().toISOString()
     };
 
@@ -136,7 +137,7 @@ async function startServer() {
 
       return res.status(201).json({
         success: true,
-        message: "Feature successfully published to Website Firestore Database!",
+        message: "Feature publication request received successfully and queued for approval! Your website administrator has been notified.",
         featureId: customId,
         feature: newFeature
       });
@@ -206,22 +207,24 @@ async function startServer() {
       });
     }
 
-    updateData.updatedAt = new Date().toISOString();
-
     try {
       const docRef = doc(db, "features", id);
-      await setDoc(docRef, updateData, { merge: true });
+      await setDoc(docRef, {
+        pendingApproval: "update",
+        pendingUpdateData: updateData,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
 
       return res.status(200).json({
         success: true,
-        message: `Feature with ID '${id}' successfully updated in Firestore database!`,
-        updatedFields: updateData
+        message: `Feature update proposal received for Feature ID: '${id}'. Queued for administrator approval.`,
+        pendingFields: updateData
       });
     } catch (err: any) {
       console.error("Firestore Update Error:", err);
       return res.status(500).json({ 
         error: "Internal Server Error", 
-        message: "Failed to update the feature in Firestore.",
+        message: "Failed to queue feature update in Firestore.",
         details: err.message 
       });
     }

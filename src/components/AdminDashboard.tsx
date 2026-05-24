@@ -35,6 +35,9 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     downloadsCount, visitsCount
   } = useData();
 
+  const pendingCreates = features.filter(f => f.pendingApproval === 'create');
+  const pendingUpdates = features.filter(f => f.pendingApproval === 'update');
+
   const [user, setUser] = useState<User | null>(null);
   const [localAdmin, setLocalAdmin] = useState<{ email: string; displayName: string } | null>(null);
   const [email, setEmail] = useState('');
@@ -52,6 +55,11 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [showUnsavedWarningPopup, setShowUnsavedWarningPopup] = useState(false);
   const [originalFeatureCopy, setOriginalFeatureCopy] = useState<Feature | null>(null);
   const [warningPostAction, setWarningPostAction] = useState<() => void>(() => {});
+  
+  // Pending creations/updates moderation states
+  const [showPendingCreatesModal, setShowPendingCreatesModal] = useState(false);
+  const [showUpdateDiffModal, setShowUpdateDiffModal] = useState(false);
+  const [selectedFeatureForUpdateDiff, setSelectedFeatureForUpdateDiff] = useState<Feature | null>(null);
   
   // Create / Edit states
   const [editingFeature, setEditingFeature] = useState<Feature | null>(null);
@@ -924,16 +932,28 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                       </h3>
                       <p className="text-sm text-slate-400 mt-1">Enable, disable, update badges, icons, gradients or use-cases of the 16 features grid.</p>
                     </div>
-                    <button 
-                      onClick={() => {
-                        setIsAddingFeature(true);
-                        setEditingFeature(null);
-                      }}
-                      className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg transition-all"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add New Feature
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {pendingCreates.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowPendingCreatesModal(true)}
+                          className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl bg-red-650 hover:bg-red-600 text-white font-bold text-xs shadow-lg transition-all animate-pulse select-none cursor-pointer"
+                        >
+                          <Icons.BellRing className="w-4 h-4 animate-bounce" />
+                          <span>New post ({pendingCreates.length})</span>
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => {
+                          setIsAddingFeature(true);
+                          setEditingFeature(null);
+                        }}
+                        className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg transition-all"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add New Feature
+                      </button>
+                    </div>
                   </div>
 
                   {editingFeature ? (
@@ -1841,9 +1861,30 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                                           <span className="text-[10px] text-slate-500 font-mono select-all">id: {feat.id}</span>
                                         </div>
                                       </div>
-                                      <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0 ${feat.active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-500 border border-amber-500/10'}`}>
-                                        {feat.active ? 'Active' : 'Archived'}
-                                      </span>
+                                      <div className="flex items-center gap-1.5 shrink-0">
+                                        {feat.pendingApproval === 'update' && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setSelectedFeatureForUpdateDiff(feat);
+                                              setShowUpdateDiffModal(true);
+                                            }}
+                                            className="text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-md bg-rose-650 hover:bg-rose-650/80 text-white shadow-[0_0_12px_rgba(244,63,94,0.4)] animate-pulse cursor-pointer border border-rose-500 transition-colors"
+                                          >
+                                            update
+                                          </button>
+                                        )}
+                                        {feat.pendingApproval === 'create' ? (
+                                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse flex items-center gap-1 shrink-0">
+                                            <Icons.Clock className="w-2.5 h-2.5" />
+                                            Pending
+                                          </span>
+                                        ) : (
+                                          <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0 ${feat.active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-500 border border-amber-500/10'}`}>
+                                            {feat.active ? 'Active' : 'Archived'}
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
 
                                     <p className="text-xs text-slate-400 leading-relaxed line-clamp-2 min-h-[2.5rem]">{feat.description}</p>
@@ -1949,9 +1990,29 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                                       <td className="p-4 text-slate-400 max-w-xs truncate">{feat.description}</td>
                                       <td className="p-4 text-slate-400 font-medium">{feat.useCase}</td>
                                       <td className="p-4 text-center">
-                                        <span className={`text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full ${feat.active ? 'bg-emerald-500/10 text-emerald-450' : 'bg-amber-500/10 text-amber-500'}`}>
-                                          {feat.active ? 'Active' : 'Archived'}
-                                        </span>
+                                        <div className="flex items-center justify-center gap-1.5">
+                                          {feat.pendingApproval === 'update' && (
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setSelectedFeatureForUpdateDiff(feat);
+                                                setShowUpdateDiffModal(true);
+                                              }}
+                                              className="text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded bg-rose-650 hover:bg-rose-600 text-white shadow-sm animate-pulse cursor-pointer border border-rose-500 transition-colors whitespace-nowrap"
+                                            >
+                                              update
+                                            </button>
+                                          )}
+                                          {feat.pendingApproval === 'create' ? (
+                                            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse whitespace-nowrap">
+                                              Pending
+                                            </span>
+                                          ) : (
+                                            <span className={`text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap ${feat.active ? 'bg-emerald-500/10 text-emerald-450' : 'bg-amber-500/10 text-amber-500'}`}>
+                                              {feat.active ? 'Active' : 'Archived'}
+                                            </span>
+                                          )}
+                                        </div>
                                       </td>
                                       <td className="p-4 pr-6 text-right">
                                         <div className="inline-flex gap-1.5">
@@ -2538,6 +2599,345 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                 >
                   Yes, Discard Changes
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* PENDING CREATIONS APPROVAL MODAL */}
+      <AnimatePresence>
+        {showPendingCreatesModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              className="bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl w-full h-[85vh] flex flex-col shadow-2xl overflow-hidden"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-950">
+                <div className="flex items-center gap-3 text-rose-455">
+                  <Icons.BellRing className="w-6 h-6 animate-bounce text-rose-500" />
+                  <div>
+                    <h4 className="font-display font-bold text-white text-lg">New Features Moderate Queue</h4>
+                    <p className="text-xs text-slate-400">Approve or Reject new feature posts submitted from outside API agents.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowPendingCreatesModal(false)}
+                  className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-850 cursor-pointer transition-colors"
+                >
+                  <Icons.X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-900/40">
+                {pendingCreates.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-3">
+                    <Icons.CheckCircle className="w-12 h-12 text-emerald-500 animate-pulse" />
+                    <h5 className="font-bold text-white text-base">All caught up!</h5>
+                    <p className="text-xs text-slate-500 max-w-sm">No new feature creations are currently waiting in the moderation queue.</p>
+                  </div>
+                ) : (
+                  pendingCreates.map((item) => {
+                    const featureIcon = (Icons as any)[item.iconName || "Sparkles"] || Icons.Sparkles;
+                    return (
+                      <div key={item.id} className="p-5 bg-slate-950 border border-slate-850 rounded-2xl space-y-4 hover:border-slate-800 transition-all">
+                        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-900/60 pb-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg bg-gradient-to-br ${item.color || 'from-blue-500 to-indigo-500'} text-white shrink-0`}>
+                              {React.createElement(featureIcon, { className: "w-5 h-5" })}
+                            </div>
+                            <div>
+                              <h5 className="font-bold text-white text-sm">{item.title}</h5>
+                              <span className="text-[10px] text-slate-500 font-mono">Proposed ID: {item.id}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await updateFeature({
+                                    ...item,
+                                    pendingApproval: null
+                                  });
+                                  setToast({ message: `Feature "${item.title}" approved and published!`, type: 'success' });
+                                  setTimeout(() => setToast(null), 4000);
+                                } catch (err) {
+                                  setToast({ message: "Failed to approve feature.", type: 'error' });
+                                  setTimeout(() => setToast(null), 4500);
+                                }
+                              }}
+                              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1"
+                            >
+                              <Icons.Check className="w-3.5 h-3.5" />
+                              Approve Post
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (window.confirm(`Are you sure you want to decline and permanently delete feature "${item.title}"?`)) {
+                                  try {
+                                    await deleteFeature(item.id);
+                                    setToast({ message: `Feature proposal rejected and deleted.`, type: 'success' });
+                                    setTimeout(() => setToast(null), 4000);
+                                  } catch (err) {
+                                    setToast({ message: "Failed to delete feature proposal.", type: 'error' });
+                                    setTimeout(() => setToast(null), 4500);
+                                  }
+                                }
+                              }}
+                              className="px-3.5 py-2 bg-slate-900 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-900/50 text-slate-400 hover:text-rose-400 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1"
+                            >
+                              <Icons.Trash2 className="w-3.5 h-3.5" />
+                              Decline
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                          <div className="space-y-1 bg-slate-900/30 p-3 rounded-xl border border-slate-900">
+                            <div className="text-slate-500 font-semibold truncate uppercase text-[9px]">Description</div>
+                            <div className="text-slate-300 leading-relaxed">{item.description}</div>
+                          </div>
+                          <div className="space-y-1 bg-slate-900/30 p-3 rounded-xl border border-slate-900">
+                            <div className="text-slate-500 font-semibold truncate uppercase text-[9px]">Use Case Label</div>
+                            <div className="text-white font-medium">{item.useCase}</div>
+                          </div>
+                        </div>
+
+                        {/* Extra features data checklist */}
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {item.videoUrl && (
+                            <span className="text-[10px] bg-sky-950/40 text-sky-400 border border-sky-900/40 px-2 py-1 rounded-md flex items-center gap-1">
+                              <Icons.Video className="w-3 h-3" /> Includes Video Demo
+                            </span>
+                          )}
+                          {item.gallery && item.gallery.length > 0 && (
+                            <span className="text-[10px] bg-indigo-950/40 text-indigo-400 border border-indigo-900/40 px-2 py-1 rounded-md flex items-center gap-1">
+                              <Icons.Image className="w-3 h-3" /> Gallery ({item.gallery.length} Images)
+                            </span>
+                          )}
+                          {item.testimonialQuote && (
+                            <span className="text-[10px] bg-purple-950/40 text-purple-400 border border-purple-900/40 px-2 py-1 rounded-md flex items-center gap-1">
+                              <Icons.Quote className="w-3 h-3" /> Testimonial Quote Loaded
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="p-4 border-t border-slate-850 bg-slate-950/60 text-right">
+                <button
+                  type="button"
+                  onClick={() => setShowPendingCreatesModal(false)}
+                  className="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-755 text-slate-300 transition-colors cursor-pointer"
+                >
+                  Close Queue
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* PENDING UPDATES COMPARATIVE DIFF MODAL */}
+      <AnimatePresence>
+        {showUpdateDiffModal && selectedFeatureForUpdateDiff && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              className="bg-slate-900 border border-slate-850 rounded-3xl max-w-4xl w-full h-[85vh] flex flex-col shadow-2xl overflow-hidden"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-950">
+                <div className="flex items-center gap-3 text-rose-500">
+                  <Icons.GitCompare className="w-6 h-6 animate-pulse" />
+                  <div>
+                    <h4 className="font-display font-bold text-white text-lg">Proposed Feature Changes</h4>
+                    <p className="text-xs text-slate-400">Comparing live values with the proposed payload updates.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    setShowUpdateDiffModal(false);
+                    setSelectedFeatureForUpdateDiff(null);
+                  }}
+                  className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-850 cursor-pointer transition-colors"
+                >
+                  <Icons.X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                <div className="bg-slate-950 border border-slate-850 p-4.5 rounded-2xl flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg bg-gradient-to-br ${selectedFeatureForUpdateDiff.color || 'from-blue-500 to-indigo-500'} text-white`}>
+                      <Icons.Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-white text-sm">{selectedFeatureForUpdateDiff.title}</div>
+                      <span className="text-[10px] text-slate-500 font-mono">ID: {selectedFeatureForUpdateDiff.id}</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono bg-blue-950 text-blue-400 border border-blue-900/40 px-2 py-1 rounded-md">
+                    Target card
+                  </span>
+                </div>
+
+                <div className="border border-slate-850 rounded-2xl overflow-hidden bg-slate-950">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-900 border-b border-slate-850 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
+                        <th className="p-4">Attribute Field</th>
+                        <th className="p-4 bg-slate-950/30">Live Value (Original)</th>
+                        <th className="p-4 bg-rose-950/10 text-rose-300">Proposed Value (New)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const original = selectedFeatureForUpdateDiff;
+                        const proposed = selectedFeatureForUpdateDiff.pendingUpdateData || {};
+                        const fieldsToDiff = [
+                          { key: "title", label: "Title tag" },
+                          { key: "description", label: "Description paragraph" },
+                          { key: "useCase", label: "Use Case Label" },
+                          { key: "iconName", label: "Lucide Icon" },
+                          { key: "color", label: "Gradient Palette CSS" },
+                          { key: "active", label: "Visibility Active Flag" },
+                          { key: "order", label: "Display Order Index" },
+                          { key: "testimonialQuote", label: "Testimonial Quote text" },
+                          { key: "testimonialAuthor", label: "Testimonial Author" },
+                          { key: "testimonialRole", label: "Testimonial Author Role" },
+                          { key: "videoUrl", label: "Demo Video url" },
+                          { key: "videoPoster", label: "Demo Video Poster url" },
+                        ];
+
+                        const changedFields = fieldsToDiff.filter(field => {
+                          const origVal = (original as any)[field.key];
+                          const propVal = (proposed as any)[field.key];
+                          if (propVal === undefined) return false;
+                          return String(origVal) !== String(propVal);
+                        });
+
+                        if (changedFields.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={3} className="p-8 text-center text-slate-500">
+                                <Icons.Layers className="w-8 h-8 text-slate-650 mx-auto mb-2 opacity-50" />
+                                No raw values differ from existing settings, except timestamp modifications.
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return changedFields.map(field => {
+                          const origVal = (original as any)[field.key];
+                          const propVal = (proposed as any)[field.key];
+                          return (
+                            <tr key={field.key} className="border-b border-slate-900 hover:bg-slate-900/10 transition-colors">
+                              <td className="p-4 font-mono font-bold text-slate-400">{field.label} <code className="text-[10px] font-normal text-slate-600">({field.key})</code></td>
+                              <td className="p-4 text-slate-500 bg-slate-950/30 font-medium whitespace-pre-wrap leading-relaxed">
+                                {origVal === undefined || origVal === null ? (
+                                  <span className="italic text-slate-700">None / Empty</span>
+                                ) : (
+                                  String(origVal)
+                                )}
+                              </td>
+                              <td className="p-4 text-white font-medium bg-rose-950/10 border-l border-rose-800/40 whitespace-pre-wrap leading-relaxed">
+                                {propVal === undefined || propVal === null ? (
+                                  <span className="italic text-slate-700">Proposed Deletion</span>
+                                ) : (
+                                  String(propVal)
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-slate-850 bg-slate-950/60 flex flex-wrap gap-2 justify-between items-center">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (window.confirm("Are you sure you want to decline these proposed edits?")) {
+                      try {
+                        const cleared = {
+                          ...selectedFeatureForUpdateDiff,
+                          pendingApproval: null,
+                          pendingUpdateData: null
+                        };
+                        await updateFeature(cleared);
+                        setShowUpdateDiffModal(false);
+                        setSelectedFeatureForUpdateDiff(null);
+                        setToast({ message: "Proposed edits rejected and dismissed cleanly.", type: 'success' });
+                        setTimeout(() => setToast(null), 4000);
+                      } catch(err) {
+                        setToast({ message: "Error rejecting proposed edits.", type: 'error' });
+                        setTimeout(() => setToast(null), 4500);
+                      }
+                    }
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-rose-950/30 border border-slate-800 hover:border-rose-900/50 text-slate-400 hover:text-rose-455 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Icons.XCircle className="w-4 h-4" />
+                  Reject Updates
+                </button>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUpdateDiffModal(false);
+                      setSelectedFeatureForUpdateDiff(null);
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-755 border border-slate-750 text-slate-350 font-semibold text-xs transition-colors cursor-pointer"
+                  >
+                    Close Comparison
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const merged = {
+                          ...selectedFeatureForUpdateDiff,
+                          ...selectedFeatureForUpdateDiff.pendingUpdateData,
+                          pendingApproval: null,
+                          pendingUpdateData: null
+                        };
+                        await updateFeature(merged);
+                        setShowUpdateDiffModal(false);
+                        setSelectedFeatureForUpdateDiff(null);
+                        setToast({ message: "Proposed changes approved and successfully deployed to live site!", type: 'success' });
+                        setTimeout(() => setToast(null), 4000);
+                      } catch(err) {
+                        setToast({ message: "Error approving proposed changes.", type: 'error' });
+                        setTimeout(() => setToast(null), 4500);
+                      }
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-500/10 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Icons.Check className="w-4 h-4" />
+                    Approve Update (Go Live)
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
