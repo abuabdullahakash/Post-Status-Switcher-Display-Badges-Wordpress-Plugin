@@ -5,6 +5,7 @@ import Features from './components/Features';
 import Documentation from './components/Documentation';
 import Pricing from './components/Pricing';
 import FAQ from './components/FAQ';
+import Contact from './components/Contact';
 import Footer from './components/Footer';
 import AdminDashboard from './components/AdminDashboard';
 import SingleFeaturePage from './components/SingleFeaturePage';
@@ -83,6 +84,7 @@ export default function App() {
                 <Documentation />
                 <Pricing />
                 <FAQ />
+                <Contact />
               </>
             )}
           </main>

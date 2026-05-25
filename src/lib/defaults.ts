@@ -324,5 +324,16 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   logoImageUrl: '',
   heroImageUrl: '',
   adminName: 'Md. Akash',
-  adminAvatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&h=256&auto=format&fit=crop'
+  adminAvatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&h=256&auto=format&fit=crop',
+  pluginDownloadUrl: '',
+  
+  // Custom Headings Defaults
+  ctaButtonText: 'Download WordPress Asset',
+  featuresSectionTitle: 'The Interactive Showcase',
+  featuresSectionSubtitle: 'Explore the versatile use-cases. Click on any feature to discover how easy it is to set up and integrate.',
+  faqSectionTitle: 'Frequently Asked Questions',
+  faqSectionSubtitle: 'Everything you need to know about the product, licensing, and installation.',
+  pricingSectionTitle: 'Choose Your Plan',
+  pricingSectionSubtitle: 'Simple, transparent pricing. Enhance your WordPress and JetEngine projects today.',
+  footerCopyrightText: 'PostStatus Switcher. Developed inside secure Cloud Workspace.'
 };

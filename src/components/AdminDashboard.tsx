@@ -46,6 +46,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'features' | 'pricing' | 'faq' | 'settings'>('dashboard');
+  const [settingsSubTab, setSettingsSubTab] = useState<'identity' | 'hero' | 'marketing' | 'download' | 'danger'>('identity');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -59,6 +60,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   // Pending creations/updates moderation states
   const [showPendingCreatesModal, setShowPendingCreatesModal] = useState(false);
   const [showUpdateDiffModal, setShowUpdateDiffModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedFeatureForUpdateDiff, setSelectedFeatureForUpdateDiff] = useState<Feature | null>(null);
   
   // Create / Edit states
@@ -634,8 +636,8 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                   onClick={() => setActiveTab('settings')}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${activeTab === 'settings' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-400' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
                 >
-                  <Columns className="w-4 h-4" />
-                  General Canvas
+                  <Icons.Settings className="w-4 h-4" />
+                  Website Settings
                 </button>
               </nav>
             )}
@@ -644,13 +646,32 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
           <div className="pt-6 border-t border-slate-850">
             {user || localAdmin ? (
               <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full border border-blue-500/30 bg-slate-900 flex items-center justify-center shrink-0">
-                    <Icons.ShieldCheck className="w-5 h-5 text-blue-400" />
+                <div 
+                  onClick={() => setShowProfileModal(true)}
+                  className="flex items-center gap-3 cursor-pointer p-2.5 -m-2 rounded-2xl hover:bg-slate-800/40 border border-transparent hover:border-slate-800/60 transition-all group relative"
+                  title="Edit Admin Profile Settings"
+                >
+                  <div className="w-10 h-10 rounded-full border border-emerald-500/30 bg-slate-950 flex items-center justify-center shrink-0 overflow-hidden relative shadow-inner">
+                    {settings.adminAvatarUrl ? (
+                      <img 
+                        src={settings.adminAvatarUrl} 
+                        alt={settings.adminName || "MD. Akash"} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <Icons.ShieldCheck className="w-5 h-5 text-emerald-400" />
+                    )}
+                    <div className="absolute inset-0 bg-emerald-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <Icons.Edit3 className="w-4 h-4 text-emerald-300" />
+                    </div>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-white truncate">MD. Akash</p>
-                    <p className="text-slate-400 text-xs truncate">mdakash136915@gmail.com</p>
+                    <p className="text-sm font-semibold text-white truncate group-hover:text-emerald-400 transition-colors flex items-center gap-1.5">
+                      {settings.adminName || "MD. Akash"}
+                      <Icons.Edit3 className="w-3 h-3 text-slate-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 shrink-0" />
+                    </p>
+                    <p className="text-slate-400 text-[10px] truncate">{(user?.email || "mdakash136915@gmail.com")}</p>
                   </div>
                 </div>
                 <button 
@@ -2383,171 +2404,436 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
               {/* SETTINGS TAB */}
               {activeTab === 'settings' && (
                 <div className="space-y-6">
-                  <div>
-                    <h3 className="text-xl font-display font-bold text-white">General Canvas Settings</h3>
-                    <p className="text-sm text-slate-400">Alter key landing page headings, branding words, sub-lines, descriptions and contact email configurations.</p>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-xl font-display font-bold text-white">Website Customizer & Global Settings</h3>
+                      <p className="text-sm text-slate-400">Alter key headings, logos, core sections narrative copy, dynamic file assets, and access configurations.</p>
+                    </div>
                   </div>
 
-                  <form onSubmit={handleSaveSettings} className="p-6 rounded-2xl bg-slate-950 border border-slate-850 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs text-slate-400 mb-1 font-medium">Branding/App Badge Logo Text</label>
-                        <input 
-                          type="text"
-                          value={settings.siteName}
-                          onChange={(e) => updateSettings({ ...settings, siteName: e.target.value })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-slate-400 mb-1 font-medium">Superadmin Verified Email (Login permission lock)</label>
-                        <input 
-                          type="email"
-                          value={settings.adminEmail}
-                          onChange={(e) => updateSettings({ ...settings, adminEmail: e.target.value })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm font-mono focus:outline-none focus:border-blue-500"
-                          required
-                        />
-                        <span className="text-[10px] text-slate-500">Only Google Logins matching this email string can make edits in Firestore.</span>
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-xs text-slate-400 mb-1 font-medium">Site SEO/Metadata Description</label>
-                        <input 
-                          type="text"
-                          value={settings.siteDescription}
-                          onChange={(e) => updateSettings({ ...settings, siteDescription: e.target.value })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-slate-400 mb-1 font-medium">Hero Primary Title (Upper)</label>
-                        <input 
-                          type="text"
-                          value={settings.heroTitle}
-                          onChange={(e) => updateSettings({ ...settings, heroTitle: e.target.value })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-slate-400 mb-1 font-medium">Hero Core Catchy Title (Highlighted gradient)</label>
-                        <input 
-                          type="text"
-                          value={settings.heroSubtitle}
-                          onChange={(e) => updateSettings({ ...settings, heroSubtitle: e.target.value })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500"
-                          required
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-xs text-slate-400 mb-1 font-medium">Hero Subtitle Paragraph Narrative</label>
-                        <textarea 
-                          value={settings.heroDescription}
-                          onChange={(e) => updateSettings({ ...settings, heroDescription: e.target.value })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-white text-sm h-28 focus:outline-none focus:border-blue-500 resize-none"
-                          required
-                        />
-                      </div>
-                      
-                      <div className="md:col-span-2 border-t border-slate-900/60 pt-5 mt-4">
-                        <h4 className="text-sm font-semibold text-white mb-4 flex items-center gap-1.5 uppercase tracking-wide">
-                          <Icons.BadgeCheck className="w-4 h-4 text-blue-400" />
-                          Brand & Product Visuals (ImgBB Cloud Hosting)
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-900/10 p-4 rounded-2xl border border-slate-900/40">
-                          <div className="space-y-2">
-                            <span className="block text-xs font-semibold text-slate-400 uppercase tracking-widest">Header Brand Logo</span>
+                  {/* INTERNAL SETTINGS TABS BUTTONS */}
+                  <div className="flex flex-wrap md:flex-nowrap items-center gap-1.5 p-1.5 bg-slate-900/60 border border-slate-900/40 rounded-2xl w-full md:w-max shadow-inner">
+                    <button
+                      type="button"
+                      onClick={() => setSettingsSubTab('identity')}
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                        settingsSubTab === 'identity' 
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10' 
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+                      }`}
+                    >
+                      <Icons.Globe className="w-3.5 h-3.5" />
+                      Brand & Visuals
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettingsSubTab('hero')}
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                        settingsSubTab === 'hero' 
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10' 
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+                      }`}
+                    >
+                      <Icons.Home className="w-3.5 h-3.5" />
+                      Hero Canvas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettingsSubTab('marketing')}
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                        settingsSubTab === 'marketing' 
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10' 
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+                      }`}
+                    >
+                      <Icons.Sparkles className="w-3.5 h-3.5" />
+                      Page Sections
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettingsSubTab('download')}
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                        settingsSubTab === 'download' 
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10' 
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+                      }`}
+                    >
+                      <Icons.Download className="w-3.5 h-3.5" />
+                      Engine Assets & Admin
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettingsSubTab('danger')}
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                        settingsSubTab === 'danger' 
+                          ? 'bg-rose-950/80 text-rose-200 border border-rose-900/30' 
+                          : 'text-slate-400 hover:text-rose-450 hover:bg-rose-950/20'
+                      }`}
+                    >
+                      <Icons.AlertCircle className="w-3.5 h-3.5" />
+                      Maintenance Center
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSaveSettings} className="p-8 rounded-3xl bg-slate-950/80 space-y-8 shadow-2xl shadow-black/80 backdrop-blur-md border border-slate-900/20">
+                    
+                    {/* SUBTAB 1: SITE IDENTITY & BRAND VISUALS */}
+                    {settingsSubTab === 'identity' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                            <Icons.Globe className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-white uppercase tracking-wide">Brand Identity & Visual Assets</h4>
+                            <p className="text-[11px] text-slate-400">Configure your global brand tags, metadata, logos, and hero mockups with compact uploads.</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner">
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1.5 font-medium">Branding Logo Text</label>
+                            <input 
+                              type="text"
+                              value={settings.siteName}
+                              onChange={(e) => updateSettings({ ...settings, siteName: e.target.value })}
+                              className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40 font-medium transition-colors hover:border-slate-800/40"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1.5 font-medium">Superadmin Lock email</label>
+                            <input 
+                              type="email"
+                              value={settings.adminEmail}
+                              onChange={(e) => updateSettings({ ...settings, adminEmail: e.target.value })}
+                              className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm font-mono focus:outline-none focus:border-blue-500/40 transition-colors hover:border-slate-800/40"
+                              required
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-xs text-slate-400 mb-1.5 font-medium">SEO & Metadata Description</label>
+                            <input 
+                              type="text"
+                              value={settings.siteDescription}
+                              onChange={(e) => updateSettings({ ...settings, siteDescription: e.target.value })}
+                              className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40 font-medium transition-colors hover:border-slate-800/40"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <h5 className="text-xs font-bold text-slate-405 uppercase tracking-widest mt-6">Upload Assets</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner space-y-4">
+                            <div className="flex items-center justify-between">
+                              <span className="block text-xs font-semibold text-slate-300">Header Light Logo</span>
+                              
+                              {/* Simple Tailwind Inline HTML Tooltip */}
+                              <div className="group relative">
+                                <Icons.HelpCircle className="w-3.5 h-3.5 text-slate-505 hover:text-white cursor-help" />
+                                <div className="absolute right-0 bottom-full mb-2 w-48 p-2 bg-slate-950 border border-slate-800 text-[10px] text-slate-350 rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                                  Allowed formats: PNG, JPG, SVG, WebP. Replaces standard site emblem in headers and footers.
+                                </div>
+                              </div>
+                            </div>
+                            
                             <ImageUploader 
                               presetUrl={settings.logoImageUrl}
                               onUploadSuccess={(url) => updateSettings({ ...settings, logoImageUrl: url })}
                               label=""
+                              compact={true}
                             />
-                            <p className="text-[10px] text-slate-550 leading-normal">Allows custom upload via files, drag and drop, or Ctrl+V clipboard paste. Replaces the generic icon with your brand logo in the header and footer.</p>
                           </div>
-                          
-                          <div className="space-y-2">
-                            <span className="block text-xs font-semibold text-slate-400 uppercase tracking-widest">Main Product Mock Image</span>
+
+                          <div className="p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner space-y-4">
+                            <div className="flex items-center justify-between">
+                              <span className="block text-xs font-semibold text-slate-300">Homepage Canvas Mockup</span>
+                              <div className="group relative">
+                                <Icons.HelpCircle className="w-3.5 h-3.5 text-slate-505 hover:text-white cursor-help" />
+                                <div className="absolute right-0 bottom-full mb-2 w-48 p-2 bg-slate-950 border border-slate-800 text-[10px] text-slate-355 rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                                  Renders inside the laptop display component on the landing page of the website.
+                                </div>
+                              </div>
+                            </div>
+                            
                             <ImageUploader 
                               presetUrl={settings.heroImageUrl}
                               onUploadSuccess={(url) => updateSettings({ ...settings, heroImageUrl: url })}
                               label=""
+                              compact={true}
                             />
-                            <p className="text-[10px] text-slate-550 leading-normal">Loads onto ImgBB and records the direct CDN link on Firestore database. Replaces the default dynamic cards visual with your own custom mockup preview.</p>
                           </div>
                         </div>
                       </div>
+                    )}
 
-                      {/* ADMIN PROFILE EDIT MODULE */}
-                      <div className="md:col-span-2 border-t border-slate-900/60 pt-5 mt-4">
-                        <h4 className="text-sm font-semibold text-white mb-4 flex items-center gap-1.5 uppercase tracking-wide">
-                          <Icons.User className="w-4 h-4 text-emerald-400 animate-pulse" />
-                          Logged-In Admin Profile Settings
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-900/10 p-4 rounded-2xl border border-slate-900/40">
-                          <div className="space-y-3 justify-center flex flex-col">
+                    {/* SUBTAB 2: HERO CANVAS */}
+                    {settingsSubTab === 'hero' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                            <Icons.Home className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-white uppercase tracking-wide">Hero Segment Typography</h4>
+                            <p className="text-[11px] text-slate-400">Alter key display titles, narrative subtitles, descriptions and action labels on your homepage.</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner">
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1.5 font-medium">Hero Top Title</label>
+                            <input 
+                              type="text"
+                              value={settings.heroTitle}
+                              onChange={(e) => updateSettings({ ...settings, heroTitle: e.target.value })}
+                              className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500/40 font-medium transition-colors hover:border-slate-800/40"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1.5 font-medium">Hero Highlighted/Gradient Title</label>
+                            <input 
+                              type="text"
+                              value={settings.heroSubtitle}
+                              onChange={(e) => updateSettings({ ...settings, heroSubtitle: e.target.value })}
+                              className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500/40 font-medium transition-colors hover:border-slate-800/40"
+                              required
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-xs text-slate-400 mb-1.5 font-medium">Hero Description Narrative</label>
+                            <textarea 
+                              value={settings.heroDescription}
+                              onChange={(e) => updateSettings({ ...settings, heroDescription: e.target.value })}
+                              className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl p-4 text-white text-sm h-28 focus:outline-none focus:border-indigo-500/40 resize-none font-medium transition-colors hover:border-slate-800/40"
+                              required
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-xs text-slate-400 mb-1.5 font-medium">Call-to-Action (CTA) Download Button Text</label>
+                            <input 
+                              type="text"
+                              value={settings.ctaButtonText || ""}
+                              placeholder="e.g. Download Plugin"
+                              onChange={(e) => updateSettings({ ...settings, ctaButtonText: e.target.value })}
+                              className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500/40 font-medium transition-colors hover:border-slate-800/40"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SUBTAB 3: PAGE SECTIONS headings */}
+                    {settingsSubTab === 'marketing' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-teal-500/10 text-teal-400">
+                            <Icons.Sparkles className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-white uppercase tracking-wide">Section Headings & Footer Customizer</h4>
+                            <p className="text-[11px] text-slate-400">Repurpose and rewrite display headlines, subheaders, and branding text on footer blocks dynamically.</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-5 p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                             <div>
-                              <label className="block text-xs text-slate-400 mb-1.5 font-medium">Profile Display Name</label>
+                              <span className="block text-xs font-bold text-blue-400 uppercase tracking-widest mb-1.5">Interactive Showcase Grid</span>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Display Title</label>
                               <input 
                                 type="text"
-                                value={settings.adminName || ""}
-                                onChange={(e) => updateSettings({ ...settings, adminName: e.target.value })}
-                                placeholder="Md. Akash"
-                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-emerald-500"
+                                value={settings.featuresSectionTitle || ""}
+                                placeholder="The Interactive Showcase"
+                                onChange={(e) => updateSettings({ ...settings, featuresSectionTitle: e.target.value })}
+                                className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40 font-medium transition-colors hover:border-slate-800/40"
                               />
                             </div>
-                            <p className="text-[10px] text-slate-500 leading-normal">Customize the display name shown in the sidebar when you or any other super-administrator logs in.</p>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium mt-6">Display Subtitle</label>
+                              <input 
+                                type="text"
+                                value={settings.featuresSectionSubtitle || ""}
+                                placeholder="Explore the versatile use-cases. Click on any feature to discover how easy it is to set up and integrate."
+                                onChange={(e) => updateSettings({ ...settings, featuresSectionSubtitle: e.target.value })}
+                                className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-550/40 font-medium transition-colors hover:border-slate-800/40"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-900/40">
+                            <div>
+                              <span className="block text-xs font-bold text-teal-400 uppercase tracking-widest mb-1.5">FAQs Section Header</span>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Display Title</label>
+                              <input 
+                                type="text"
+                                value={settings.faqSectionTitle || ""}
+                                placeholder="Frequently Asked Questions"
+                                onChange={(e) => updateSettings({ ...settings, faqSectionTitle: e.target.value })}
+                                className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-teal-500/40 font-medium transition-colors hover:border-slate-800/40"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium mt-6">Display Subtitle</label>
+                              <input 
+                                type="text"
+                                value={settings.faqSectionSubtitle || ""}
+                                placeholder="Everything you need to know about the product and billing."
+                                onChange={(e) => updateSettings({ ...settings, faqSectionSubtitle: e.target.value })}
+                                className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-teal-550/40 font-medium transition-colors hover:border-slate-800/40"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-900/40">
+                            <div>
+                              <span className="block text-xs font-bold text-indigo-455 uppercase tracking-widest mb-1.5">Licensing Pricing Plans</span>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Display Title</label>
+                              <input 
+                                type="text"
+                                value={settings.pricingSectionTitle || ""}
+                                placeholder="Choose Your Plan"
+                                onChange={(e) => updateSettings({ ...settings, pricingSectionTitle: e.target.value })}
+                                className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500/40 font-medium transition-colors hover:border-slate-800/40"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-medium mt-6">Display Subtitle</label>
+                              <input 
+                                type="text"
+                                value={settings.pricingSectionSubtitle || ""}
+                                placeholder="Simple, transparent pricing. Enhance your JetEngine projects today."
+                                onChange={(e) => updateSettings({ ...settings, pricingSectionSubtitle: e.target.value })}
+                                className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-550/40 font-medium transition-colors hover:border-slate-800/40"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="pt-4 border-t border-slate-900/40">
+                            <span className="block text-xs font-bold text-yellow-500 uppercase tracking-widest mb-1.5">Bespoke Footer Credits</span>
+                            <label className="block text-xs text-slate-400 mb-1.5 font-medium">Custom Copyright String / Dynamic Badging</label>
+                            <input 
+                              type="text"
+                              value={settings.footerCopyrightText || ""}
+                              placeholder="PostStatus Switcher. Developed inside secure Cloud Workspace."
+                              onChange={(e) => updateSettings({ ...settings, footerCopyrightText: e.target.value })}
+                              className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-yellow-500/40 font-medium transition-colors hover:border-slate-800/40"
+                            />
+                            <p className="text-[10px] text-slate-500 block mt-1">Leave empty to display default affiliate non-affiliation credits.</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SUBTAB 4: ASSETS & ADMINS */}
+                    {settingsSubTab === 'download' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+                            <Icons.Download className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-white uppercase tracking-wide">Dynamic Engine Assets & Administrator Profiles</h4>
+                            <p className="text-[11px] text-slate-400">Connect Google Drive file resources, customize admin display cards, and handle avatar uploads.</p>
+                          </div>
+                        </div>
+
+                        <div className="p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner space-y-4">
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1.5 font-semibold">
+                              Plugin Download Link (Google Drive / GitHub Releases / Custom ZIP URL)
+                            </label>
+                            <input 
+                              type="text"
+                              value={settings.pluginDownloadUrl || ""}
+                              onChange={(e) => updateSettings({ ...settings, pluginDownloadUrl: e.target.value })}
+                              placeholder="e.g. https://drive.google.com/file/d/XYZ/view?usp=sharing"
+                              className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-3 text-white text-sm font-mono focus:outline-none focus:border-emerald-500/40 transition-colors hover:border-slate-800/40"
+                            />
                           </div>
                           
-                          <div className="space-y-2">
-                            <span className="block text-xs font-semibold text-slate-400 uppercase tracking-widest">Profile Avatar Image</span>
+                          <div className="rounded-xl bg-slate-950/40 p-4 border-l-2 border-emerald-500/30 shadow-inner">
+                            <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider block mb-1">Google Drive instructions</span>
+                            <p className="text-[11px] text-slate-400 leading-normal">Upload your plugin ZIP file to Google Drive, set its share permission to <span className="text-slate-200 font-semibold">"Anyone with the link can view (Viewer)"</span>, copy the link, and paste here. Our system will download it directly with one click.</p>
+                          </div>
+                        </div>
+
+                        <h5 className="text-xs font-bold text-slate-405 uppercase tracking-widest mt-6">Admin Identity Profile</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner">
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1.5 font-medium">Administrator Name</label>
+                            <input 
+                              type="text"
+                              value={settings.adminName || ""}
+                              onChange={(e) => updateSettings({ ...settings, adminName: e.target.value })}
+                              className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40 font-medium transition-colors hover:border-slate-800/40"
+                            />
+                          </div>
+                          <div className="space-y-4">
+                            <label className="block text-xs text-slate-400 font-medium">Profile Card Avatar Compact Upload</label>
+                            
                             <ImageUploader 
                               presetUrl={settings.adminAvatarUrl}
                               onUploadSuccess={(url) => updateSettings({ ...settings, adminAvatarUrl: url })}
                               label=""
+                              compact={true}
                             />
-                            <p className="text-[10px] text-slate-550 leading-normal">Change your profile picture quickly. Drag-and-drop support, file selection, or direct pasting (Ctrl+V) from the clipboard are fully integrated.</p>
                           </div>
                         </div>
                       </div>
+                    )}
 
-                    </div>
-
-                    {/* DANGER ZONE FACTORY RESET */}
-                    <div className="mt-8 p-6 rounded-2xl border border-rose-900/40 bg-rose-950/10 space-y-3 shadow-xl">
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div>
-                          <h4 className="font-semibold text-rose-400 text-sm flex items-center gap-2">
-                            <Icons.ShieldAlert className="w-4 h-4 text-rose-400 animate-pulse" />
-                            Need a Fresh Start?
-                          </h4>
-                          <p className="text-xs text-slate-400 mt-1">Easily populate or restock the Firestore databases with original features, defaults, and settings anytime.</p>
+                    {/* SUBTAB 5: MAINTENANCE / DANGER ZONE */}
+                    {settingsSubTab === 'danger' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-rose-500/10 text-rose-450 animate-pulse">
+                            <Icons.ShieldAlert className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-rose-400 uppercase tracking-wide">Platform Maintenance & Safety Center</h4>
+                            <p className="text-[11px] text-slate-400">Safety procedures to restocking the database registries, reverting files, or locking elements.</p>
+                          </div>
                         </div>
-                        <button 
-                          type="button"
-                          onClick={handleReset}
-                          className="flex items-center gap-2 px-4 py-2.5 bg-rose-950 border border-rose-800 hover:bg-rose-900 rounded-xl text-xs text-rose-200 hover:text-white transition-all font-semibold cursor-pointer shrink-0"
-                        >
-                          <Icons.RefreshCw className="w-3.5 h-3.5 text-rose-400" />
-                          Restore System Defaults
-                        </button>
-                      </div>
-                    </div>
 
-                    <div className="flex justify-end pt-4">
+                        <div className="p-6 rounded-2xl bg-rose-950/5 border border-rose-900/20 space-y-3 shadow-xl shadow-black/10">
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                              <h4 className="font-semibold text-rose-400 text-sm flex items-center gap-2">
+                                <Icons.RefreshCw className="w-4 h-4 text-rose-400 animate-spin-slow" />
+                                Rebuilt original collections fallback defaults?
+                              </h4>
+                              <p className="text-xs text-slate-450 mt-1">Restock the Firestore datalayer with original preset products features grids, standard plans and FAQs easily.</p>
+                            </div>
+                            <button 
+                              type="button"
+                              onClick={handleReset}
+                              className="flex items-center gap-2 px-4 py-2.5 bg-rose-950/80 border border-rose-900/30 hover:bg-rose-900 rounded-xl text-xs text-rose-200 hover:text-white transition-all font-semibold cursor-pointer shrink-0"
+                            >
+                              <Icons.RefreshCw className="w-3.5 h-3.5 text-rose-400" />
+                              Restore Database Defaults
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* BOTTOM SAVE BAR */}
+                    <div className="flex justify-end pt-4 border-t border-slate-900/40">
                       <button 
                         type="submit"
                         disabled={isSaving}
-                        className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-500/20 hover:shadow-blue-500/35 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-500/20 hover:shadow-blue-500/35 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed transition-all"
                       >
                         {isSaving ? (
                           <>
                             <Icons.RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-200" />
-                            <span>Saving settings...</span>
+                            <span>Deploying configurations...</span>
                           </>
                         ) : (
-                          <span>Commit Site Settings To Database</span>
+                          <span>Commit Customizer Settings To Database</span>
                         )}
                       </button>
                     </div>
@@ -2938,6 +3224,116 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                     Approve Update (Go Live)
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* SUPERADMIN PROFILE SETTINGS DYNAMIC POPUP / MODAL */}
+      <AnimatePresence>
+        {showProfileModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[250] flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden relative shadow-emerald-500/5"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-blue-500" />
+              
+              <div className="flex items-center justify-between p-6 border-b border-slate-800/80 bg-slate-950">
+                <div className="flex items-center gap-2.5 text-emerald-400">
+                  <Icons.UserCheck className="w-5 h-5 text-emerald-400 animate-pulse" />
+                  <div>
+                    <h4 className="font-display font-bold text-white text-base">Superadmin Profile Control</h4>
+                    <p className="text-[11px] text-slate-400">Manage real-time personal identity and brand visual badge.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowProfileModal(false)}
+                  className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-850 cursor-pointer transition-colors"
+                >
+                  <Icons.X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6 bg-slate-900/25">
+                {/* Visual Circle Preview & Image Uploader */}
+                <div className="flex flex-col items-center text-center p-4 rounded-2xl bg-slate-950/55 border border-slate-850">
+                  <div className="w-24 h-24 rounded-full border border-emerald-500/20 bg-slate-900 flex items-center justify-center shrink-0 overflow-hidden relative shadow-lg group mb-3">
+                    {settings.adminAvatarUrl ? (
+                      <img 
+                        src={settings.adminAvatarUrl} 
+                        alt={settings.adminName || "MD. Akash"} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <Icons.ShieldCheck className="w-10 h-10 text-emerald-400" />
+                    )}
+                  </div>
+                  <h5 className="text-sm font-bold text-white mb-0.5">{settings.adminName || "MD. Akash"}</h5>
+                  <p className="text-[11px] text-slate-500 mb-4">{(user?.email || "mdakash136915@gmail.com")}</p>
+                  
+                  <div className="w-full text-left">
+                    <span className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2 text-center">Update Avatar Image</span>
+                    <ImageUploader 
+                      presetUrl={settings.adminAvatarUrl}
+                      onUploadSuccess={(url) => {
+                        updateSettings({ ...settings, adminAvatarUrl: url });
+                        setToast({ message: "Profile picture updated instantly in live data stream!", type: 'success' });
+                        setTimeout(() => setToast(null), 3000);
+                      }}
+                      label=""
+                    />
+                  </div>
+                </div>
+
+                {/* Form Fields */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Display Name</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                        <Icons.User className="w-4 h-4 text-emerald-500/70" />
+                      </div>
+                      <input 
+                        type="text"
+                        value={settings.adminName || ""}
+                        onChange={(e) => updateSettings({ ...settings, adminName: e.target.value })}
+                        placeholder="Md. Akash"
+                        className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-9 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-emerald-500 font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-950/60 border border-slate-850 p-3 mt-3">
+                    <span className="text-[10px] uppercase font-semibold text-emerald-400 tracking-wider flex items-center gap-1 mb-1">
+                      <Icons.ShieldCheck className="w-3 h-3 text-emerald-400 animate-pulse" />
+                      Live Broadcasting Enabled
+                    </span>
+                    <p className="text-[11px] text-slate-400 leading-normal">
+                      Updating your display name and photo here instantly modifies the live sidebar elements, real-time administrative status tags, and changes persist fully across the Cloud Firestore backend database.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-5 border-t border-slate-800/80 bg-slate-950 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowProfileModal(false)}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors cursor-pointer shadow-lg shadow-emerald-500/10 flex items-center gap-1.5"
+                >
+                  <Icons.Check className="w-4 h-4" />
+                  Save & Close
+                </button>
               </div>
             </motion.div>
           </motion.div>

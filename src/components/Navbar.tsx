@@ -21,6 +21,7 @@ export default function Navbar() {
     { name: 'Documentation', href: '#docs' },
     { name: 'Pricing', href: '#pricing' },
     { name: 'FAQ', href: '#faq' },
+    { name: 'Contact', href: '#contact' },
   ];
 
   return (
@@ -35,7 +36,18 @@ export default function Navbar() {
     >
       <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <a 
+            href="#" 
+            className="flex items-center gap-2 cursor-pointer select-none no-underline hover:opacity-95 transition-opacity duration-150" 
+            onClick={(e) => {
+              e.preventDefault();
+              if (window.location.hash && window.location.hash !== '') {
+                window.location.hash = '';
+              } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }}
+          >
             {settings.logoImageUrl ? (
               <img 
                 src={settings.logoImageUrl} 
@@ -57,10 +69,10 @@ export default function Navbar() {
                 settings.siteName
               )}
             </span>
-          </div>
+          </a>
 
           {/* Desktop Nav Links */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden lg:flex items-center gap-8">
             {links.map((link) => (
               <a 
                 key={link.name} 
@@ -80,14 +92,14 @@ export default function Navbar() {
           </div>
 
           {/* Contact Button */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden lg:flex items-center gap-4">
             <a 
-              href="#footer"
+              href="#contact"
               onClick={(e) => {
                 e.preventDefault();
-                const footer = document.getElementById('footer');
-                if (footer) {
-                  footer.scrollIntoView({ behavior: 'smooth' });
+                const contactSec = document.getElementById('contact');
+                if (contactSec) {
+                  contactSec.scrollIntoView({ behavior: 'smooth' });
                 }
               }}
               className="bg-white hover:bg-slate-100 text-slate-950 duration-200 px-5 py-2.5 rounded-full font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer uppercase tracking-wider shadow-[0_4px_15px_rgba(255,255,255,0.1)] hover:shadow-[0_4px_25px_rgba(255,255,255,0.2)] hover:scale-[1.03] active:scale-[0.97]"
@@ -98,7 +110,7 @@ export default function Navbar() {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center">
+          <div className="lg:hidden flex items-center">
             <button 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)} 
               className="p-2 rounded-lg bg-slate-900/60 border border-slate-900 text-slate-300 hover:text-white transition-colors cursor-pointer"
@@ -118,9 +130,9 @@ export default function Navbar() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25, ease: 'easeInOut' }}
-            className="md:hidden absolute top-full left-0 right-0 bg-slate-950/95 backdrop-blur-xl border-b border-slate-900 overflow-hidden shadow-2xl"
+            className="lg:hidden absolute top-full left-0 right-0 bg-slate-950/95 backdrop-blur-xl border-b border-slate-900 overflow-hidden shadow-2xl"
           >
-            <div className="px-4 py-6 space-y-4 max-w-sm mx-auto">
+            <div className="px-4 sm:px-6 py-6 space-y-4 max-w-[1320px] mx-auto">
               <div className="flex flex-col gap-1.5">
                 {links.map((link) => (
                   <a
@@ -142,13 +154,13 @@ export default function Navbar() {
               </div>
               <div className="pt-2 border-t border-slate-900">
                 <a 
-                  href="#footer"
+                  href="#contact"
                   onClick={(e) => {
                     setMobileMenuOpen(false);
                     e.preventDefault();
-                    const footer = document.getElementById('footer');
-                    if (footer) {
-                      footer.scrollIntoView({ behavior: 'smooth' });
+                    const contactSec = document.getElementById('contact');
+                    if (contactSec) {
+                      contactSec.scrollIntoView({ behavior: 'smooth' });
                     }
                   }}
                   className="w-full text-center py-3 px-4 rounded-full bg-white hover:bg-slate-100 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 uppercase cursor-pointer transition-all shadow-[0_4px_15px_rgba(255,255,255,0.1)]"

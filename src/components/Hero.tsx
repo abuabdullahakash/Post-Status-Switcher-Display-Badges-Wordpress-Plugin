@@ -3,6 +3,24 @@ import { motion } from 'motion/react';
 import { ArrowRight, Play, CheckCircle2, RefreshCw, ArrowDownToLine } from 'lucide-react';
 import { useData } from '../context/DataContext';
 
+function getDirectDownloadUrl(url: string | undefined): string {
+  if (!url) return '';
+  const trimmedUrl = url.trim();
+  
+  // Custom parsing for Google Drive file URLs
+  // Regular expression to find the folder ID or file ID in drive URLs
+  // e.g., https://drive.google.com/file/d/1A2B3C4D5E6F/view?usp=sharing
+  const driveRegex = /(?:drive\.google\.com\/(?:file\/d\/|open\?id=)|docs\.google\.com\/file\/d\/)([a-zA-Z0-9_-]{25,})/i;
+  const match = trimmedUrl.match(driveRegex);
+  
+  if (match && match[1]) {
+    const fileId = match[1];
+    return `https://drive.google.com/uc?export=download&id=${fileId}`;
+  }
+  
+  return trimmedUrl;
+}
+
 export default function Hero() {
   const { settings, incrementDownload } = useData();
   const [downloading, setDownloading] = useState(false);
@@ -11,6 +29,35 @@ export default function Hero() {
     if (downloading) return;
     setDownloading(true);
     incrementDownload();
+
+    // Resolve direct download URL
+    const urlSet = settings.pluginDownloadUrl;
+    const directUrl = getDirectDownloadUrl(urlSet);
+
+    if (directUrl) {
+      // Create a transient anchor element to trigger direct download window
+      const link = document.createElement('a');
+      link.href = directUrl;
+      link.target = '_blank';
+      link.setAttribute('download', 'poststatus-switcher.zip');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      // Fallback: If no custom plugin URL has been configured in administrative dashboard,
+      // trigger standard template ZIP simulation mock download so that it functions like "one click download" for placeholder/live preview!
+      const zipContent = "PostStatus Switcher & Display Badges Plugin Template ZIP.\n\nConfigure your real download ZIP link from Google Drive or GitHub inside the Live Superadmin Settings Canvas of the Dashboard (mdakash136915@gmail.com).";
+      const blob = new Blob([zipContent], { type: 'application/zip' });
+      const mockUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = mockUrl;
+      link.setAttribute('download', 'poststatus-switcher-fallback.zip');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(mockUrl);
+    }
+
     setTimeout(() => {
       setDownloading(false);
     }, 3000);
@@ -70,7 +117,7 @@ export default function Hero() {
               }`}
             >
               <ArrowDownToLine className={`w-4 h-4 sm:w-5 sm:h-5 ${downloading ? 'animate-bounce' : ''}`} />
-              <span>{downloading ? "Downloading... ✅" : "Download Plugin"}</span>
+              <span>{downloading ? "Downloading... ✅" : (settings.ctaButtonText || "Download Plugin")}</span>
             </button>
             <a 
               href="#features" 

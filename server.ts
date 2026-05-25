@@ -4,6 +4,7 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
+import nodemailer from "nodemailer";
 
 async function startServer() {
   const app = express();
@@ -24,6 +25,9 @@ async function startServer() {
 
   const firebaseApp = initializeApp(firebaseConfig);
   const db = getFirestore(firebaseApp, localConfig.firestoreDatabaseId);
+
+  // In-memory rate limiting map for contact submissions to protect against spam bots
+  const ipRateLimits = new Map<string, number[]>();
 
   // Enable JSON body requests
   app.use(express.json());
@@ -223,9 +227,227 @@ async function startServer() {
     } catch (err: any) {
       console.error("Firestore Update Error:", err);
       return res.status(500).json({ 
-        error: "Internal Server Error", 
-        message: "Failed to queue feature update in Firestore.",
-        details: err.message 
+          error: "Internal Server Error", 
+          message: "Failed to queue feature update in Firestore.",
+          details: err.message 
+      });
+    }
+  });
+
+  // API Route - Direct Support & Contact form dispatch (Stores to Firestore & sends real-time SMTP emails)
+  app.post("/api/contact", async (req, res) => {
+    const { name, email, subject, message, websiteVerification, faxNumberInput, numA, numB, userAnswer } = req.body;
+
+    // 1. IP Rate Limiting (Memory-based)
+    const clientIp = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown-ip") as string;
+    const now = Date.now();
+    const timeframe = 10 * 60 * 1000; // 10 minutes
+
+    let clientSubmissions = ipRateLimits.get(clientIp) || [];
+    // Filter entries older than 10 minutes
+    clientSubmissions = clientSubmissions.filter(ts => now - ts < timeframe);
+
+    if (clientSubmissions.length >= 3) {
+      return res.status(429).json({
+        error: "Too Many Requests",
+        message: "Spam block triggered. Excessive form submissions detected. Please wait 10 minutes before sending another inquiry."
+      });
+    }
+
+    clientSubmissions.push(now);
+    ipRateLimits.set(clientIp, clientSubmissions);
+
+    // 2. Validation Checks
+    if (!name || !email || !message) {
+      return res.status(400).json({
+        error: "Bad Request",
+        message: "Missing required contact fields: 'name', 'email', and 'message' are mandatory."
+      });
+    }
+
+    if (name.trim().length < 3) {
+      return res.status(400).json({
+        error: "Bad Request",
+        message: "Your name is too short. Please provide a real name (min 3 characters)."
+      });
+    }
+
+    if (message.trim().length < 15) {
+      return res.status(400).json({
+        error: "Bad Request",
+        message: "Your message detail is too short. Please write at least 15 characters to explain your request."
+      });
+    }
+
+    // 3. Math Captcha Verification
+    if (numA === undefined || numB === undefined || userAnswer === undefined) {
+      return res.status(400).json({
+        error: "Bad Request",
+        message: "Missing security captcha verification code. Please complete the security equation field."
+      });
+    }
+
+    const expectedAnswer = Number(numA) + Number(numB);
+    if (Number(userAnswer) !== expectedAnswer) {
+      return res.status(400).json({
+        error: "Captcha Verification Failed",
+        message: "Incorrect math security captcha answer. Please solve the dynamic puzzle again."
+      });
+    }
+
+    // 4. Honeypot check (Silent Bypass)
+    if (websiteVerification || faxNumberInput) {
+      console.warn(`[SPAM PREVENTION] Honeypot triggered. Silent bypass executed for IP: ${clientIp}`);
+      return res.status(201).json({
+        success: true,
+        message: "Message recorded and dispatched successfully!",
+        contactId: `contact-discard-${Date.now()}`,
+        smtpDispatched: true
+      });
+    }
+
+    // 5. Keyword Spam Analyzer & Excessive links checking (Silent Bypass)
+    let isKeywordSpam = false;
+    const spamKeywords = ["poker", "casino", "viagra", "crypto invest", "seo rank", "maximize leads", "increase traffic", "forex trade", "passive income", "earn money from home", "betting site"];
+    const lowercaseMessage = message.toLowerCase();
+    
+    for (const kw of spamKeywords) {
+      if (lowercaseMessage.includes(kw)) {
+        isKeywordSpam = true;
+        break;
+      }
+    }
+
+    const urlPattern = /https?:\/\/[^\s]+/g;
+    const urlsCount = (message.match(urlPattern) || []).length;
+    if (urlsCount > 1 || isKeywordSpam) {
+      console.warn(`[SPAM PREVENTION] Message flagged as Spam (URLs count: ${urlsCount}, keyword spam: ${isKeywordSpam}). Silent bypass applied.`);
+      return res.status(201).json({
+        success: true,
+        message: "Message recorded and dispatched successfully!",
+        contactId: `contact-discard-${Date.now()}`,
+        smtpDispatched: true
+      });
+    }
+
+    // Legitimate non-spam message - process and save to firesore & dispatch notifier email
+    const contactId = `contact-${Date.now()}`;
+    const contactDoc = {
+      id: contactId,
+      name,
+      email,
+      subject: subject || "Technical Inquiry",
+      message,
+      createdAt: new Date().toISOString(),
+      // Add server-side secret validation token to pass security rules checks
+      serverDispatchSecret: "PostStatusServerBypassToken2026"
+    };
+
+    try {
+      // 1. Save entry to Firestore database for persistent admin records
+      const docRef = doc(db, "contacts", contactId);
+      await setDoc(docRef, contactDoc);
+
+      // 2. Dispatch real-time SMTP notification using nodemailer (if keys are configured)
+      const smtpHost = process.env.SMTP_HOST;
+      const smtpPort = process.env.SMTP_PORT;
+      const smtpUser = process.env.SMTP_USER;
+      const smtpPass = process.env.SMTP_PASS;
+
+      let emailSent = false;
+      let emailError = null;
+
+      const recipientEmail = "abuabdullahakash@gmail.com";
+
+      if (smtpHost && smtpPort && smtpUser && smtpPass) {
+        try {
+          const transporter = nodemailer.createTransport({
+            host: smtpHost,
+            port: Number(smtpPort),
+            secure: Number(smtpPort) === 465, // True for 465, false for 587 or other ports
+            auth: {
+              user: smtpUser,
+              pass: smtpPass
+            }
+          });
+
+          const mailOptions = {
+            from: `"${name} via Support Form" <${smtpUser}>`,
+            to: recipientEmail,
+            replyTo: email,
+            subject: `[Support Ticket] ${subject || "New Inquiry"} - ${name}`,
+            text: `New support dispatch received from contact form:\n\n` +
+                  `Sender: ${name} (${email})\n` +
+                  `Subject: ${subject}\n\n` +
+                  `Message:\n${message}\n\n` +
+                  `--- System Notification ---\n` +
+                  `This email was dispatched from your PostStatus Admin dashboard contact page.\n` +
+                  `Database ID: ${contactId}`,
+            html: `
+              <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #fafafa;">
+                <div style="border-bottom: 2px solid #3b82f6; padding-bottom: 15px; margin-bottom: 20px;">
+                  <h2 style="color: #1e293b; margin: 0; font-size: 22px;">New Contact Form Dispatch</h2>
+                  <p style="color: #64748b; margin: 5px 0 0 0; font-size: 14px;">Inquiry tracked under Ticket ID: <strong>#${contactId}</strong></p>
+                </div>
+                
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
+                  <tr>
+                    <td style="padding: 8px 0; color: #475569; font-weight: bold; width: 120px;">Sender Name:</td>
+                    <td style="padding: 8px 0; color: #0f172a;">${name}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #475569; font-weight: bold;">Sender Email:</td>
+                    <td style="padding: 8px 0; color: #0f172a;"><a href="mailto:${email}" style="color: #3b82f6; text-decoration: none;">${email}</a></td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #475569; font-weight: bold;">Subject Category:</td>
+                    <td style="padding: 8px 0; color: #0f172a;"><span style="background-color: #eff6ff; color: #1e40af; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;">${subject}</span></td>
+                  </tr>
+                </table>
+
+                <div style="background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+                  <h4 style="color: #475569; margin: 0 0 10px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em;">Message Body</h4>
+                  <p style="color: #334155; line-height: 1.6; margin: 0; white-space: pre-wrap; font-size: 14px;">${message}</p>
+                </div>
+
+                <div style="border-t: 1px solid #e2e8f0; padding-top: 15px; text-align: center;">
+                  <p style="font-size: 11px; color: #94a3b8; margin: 0;">This email was sent dynamically via PostStatus Plugin's integrated Node.js platform.</p>
+                </div>
+              </div>
+            `
+          };
+
+          await transporter.sendMail(mailOptions);
+          emailSent = true;
+          console.log(`[SMTP SUCCESS] Mail delivered to "${recipientEmail}" from "${email}"`);
+        } catch (mailErr: any) {
+          console.error("[SMTP ERROR] Mail Dispatch Failed:", mailErr);
+          emailError = mailErr.message;
+        }
+      } else {
+        // Fallback: SMTP not configured, simulate success and print blueprint log
+        console.warn(`[SMTP NOTIFICATION MOCK] Send contact notification mockup:`);
+        console.warn(`\tTo: ${recipientEmail}`);
+        console.warn(`\tFrom: ${email}`);
+        console.warn(`\tSubject: ${subject}`);
+        console.warn(`\tBody: ${message}`);
+        console.warn(`[REASON] No active SMTP variables (SMTP_HOST, SMTP_USER, etc.) configured in standard server environments.`);
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: "Message recorded and dispatched successfully!",
+        contactId,
+        smtpDispatched: emailSent,
+        ...(emailError && { smtpError: emailError })
+      });
+
+    } catch (dbErr: any) {
+      console.error("Database Contact Entry Failure:", dbErr);
+      return res.status(500).json({
+        error: "Internal Server Error",
+        message: "Could not record contact dispatch transaction in Firestore database.",
+        details: dbErr.message
       });
     }
   });

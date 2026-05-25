@@ -68,7 +68,7 @@ export default function Footer({ onOpenAdmin }: { onOpenAdmin?: () => void }) {
 
         <div className="pt-8 border-t border-slate-900 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-slate-500 text-sm">
-            © {new Date().getFullYear()} {settings.siteName} Plugin. Not affiliated with Crocoblock or Elementor.
+            © {new Date().getFullYear()} {settings.footerCopyrightText || `${settings.siteName} Plugin. Not affiliated with Crocoblock or Elementor.`}
           </p>
           <div className="flex items-center gap-4">
             {onOpenAdmin && (

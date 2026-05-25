@@ -6,7 +6,7 @@ import { useData } from '../context/DataContext';
 
 export default function Features() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const { features } = useData();
+  const { features, settings } = useData();
 
   // Filter active features to display on frontend grid (hide unapproved creations)
   const activeFeatures = features.filter(f => f.active && f.pendingApproval !== 'create');
@@ -15,9 +15,11 @@ export default function Features() {
     <section id="features" className="py-24 bg-slate-950 relative">
       <div className="max-w-[1320px] mx-auto px-[15px] sm:px-[20px] lg:px-[40px]">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-5xl font-display font-bold mb-6">The Interactive Showcase</h2>
+          <h2 className="text-3xl md:text-5xl font-display font-bold mb-6">
+            {settings.featuresSectionTitle || 'The Interactive Showcase'}
+          </h2>
           <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-            Explore the versatile use-cases. Click on any feature to discover how easy it is to set up and integrate.
+            {settings.featuresSectionSubtitle || 'Explore the versatile use-cases. Click on any feature to discover how easy it is to set up and integrate.'}
           </p>
         </div>
 
@@ -37,11 +39,11 @@ export default function Features() {
                   onClick={() => setExpandedId(isExpanded ? null : feature.id)}
                 >
                   <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className={`p-3 rounded-xl bg-gradient-to-br ${feature.color} bg-opacity-10 shadow-lg`}>
-                        <IconComponent className="w-6 h-6 text-white" />
+                    <div className="flex items-center gap-2.5 sm:gap-4 mb-4">
+                      <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br ${feature.color} bg-opacity-10 shadow-lg`}>
+                        <IconComponent className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
                       </div>
-                      <h3 className="text-xl font-display font-bold group-hover:text-blue-400 transition-colors">{feature.title}</h3>
+                      <h3 className="text-lg sm:text-xl font-display font-bold group-hover:text-blue-400 transition-colors">{feature.title}</h3>
                     </div>
                     <div className="text-slate-500 group-hover:text-slate-300 transition-colors">
                       {isExpanded ? <Minus className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
@@ -76,7 +78,7 @@ export default function Features() {
                             }}
                             className="group/btn inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer active:scale-95 shadow-md shadow-blue-500/20 hover:shadow-blue-500/35 hover:-translate-y-0.5 text-center shrink-0"
                           >
-                            <span>Demo</span>
+                            <span>View Details</span>
                             <Icons.ArrowUpRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 shrink-0" />
                           </button>
                         </div>

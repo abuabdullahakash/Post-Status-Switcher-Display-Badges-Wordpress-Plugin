@@ -2,10 +2,34 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Configured for instant demo setup: allows read and write to all collections.
-    // This allows your local admin fallback (mdakash136915@gmail.com) to save and update
-    // features, pricing, and settings instantly on Vercel without configuring Firebase Auth.
+    // Global Safety Net: default deny
     match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // contacts: Needs server verification token. Cannot be read or modified directly from frontend.
+    match /contacts/{documentId} {
+      allow read, delete: if false;
+      allow create, update: if request.resource.data.serverDispatchSecret == "PostStatusServerBypassToken2026";
+    }
+    
+    // features: read and write allowed
+    match /features/{documentId} {
+      allow read, write: if true;
+    }
+
+    // pricingPlans: read and write allowed
+    match /pricingPlans/{documentId} {
+      allow read, write: if true;
+    }
+
+    // faqs: read and write allowed
+    match /faqs/{documentId} {
+      allow read, write: if true;
+    }
+
+    // settings: read and write allowed
+    match /settings/{documentId} {
       allow read, write: if true;
     }
   }

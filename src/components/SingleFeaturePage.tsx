@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  ArrowLeft, Check, Compass, Sparkles, Star, ChevronRight, HelpCircle, 
+  ArrowLeft, Check, Compass, Sparkles, Star, ChevronLeft, ChevronRight, HelpCircle, 
   Settings, Layers, Terminal, AlertTriangle, Play, RefreshCw, ShoppingCart, 
   Timer, Columns, Zap, Home, Users, LockOpen, AlertCircle, Globe, Shield, CheckCircle, Video
 } from 'lucide-react';
@@ -72,6 +72,7 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [activeTutorialIndex, setActiveTutorialIndex] = useState(0);
+  const [activeTestimonialIndex, setActiveTestimonialIndex] = useState(0);
 
   // Prevent background scroll when lightbox or video player opens
   useEffect(() => {
@@ -300,11 +301,199 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
     }
   };
 
-  const featureTestimonial = {
-    quote: feature.testimonialQuote || testimonialsMap[feature.id]?.quote || "Integrating these custom display badges transformed how users visually explore status changes across our custom tables.",
-    author: feature.testimonialAuthor || testimonialsMap[feature.id]?.author || "Alex Mercer",
-    role: feature.testimonialRole || testimonialsMap[feature.id]?.role || "Senior Consultant, JetDevelopers"
+  // Custom multi-testimonials map to allow left-right sliding proofs
+  const multipleTestimonialsMap: Record<string, { quote: string; author: string; role: string }[]> = {
+    'auto-transition': [
+      {
+        quote: feature.testimonialQuote || testimonialsMap[feature.id]?.quote || "This Auto-Transition feature saved me 10 hours a week on my job board! Slots shut down automatically exact to the millisecond.",
+        author: feature.testimonialAuthor || testimonialsMap[feature.id]?.author || "John Doe",
+        role: feature.testimonialRole || testimonialsMap[feature.id]?.role || "Founder, WP Job Hunters"
+      },
+      {
+        quote: "Dynamic status scheduling works like magic. We saw ad revenue increase by 24% because expired posts cleared out immediately, driving clients to upgrade.",
+        author: "Marcus Vance",
+        role: "Ad Operations, DirectoryHQ"
+      },
+      {
+        quote: "Extremely reliable hook logic. I no longer write custom cron jobs to expire custom posts.",
+        author: "Liam Sterling",
+        role: "Senior WordPress Engineer"
+      }
+    ],
+    'taxonomy-columns': [
+      {
+        quote: feature.testimonialQuote || testimonialsMap[feature.id]?.quote || "Seeing classifications inside WP post tables makes managing 4,000 magazine articles a beautiful breeze. Recommended!",
+        author: feature.testimonialAuthor || testimonialsMap[feature.id]?.author || "Evelyn Reed",
+        role: feature.testimonialRole || testimonialsMap[feature.id]?.role || "Lead Editor, TechDaily"
+      },
+      {
+        quote: "The admin column sorting makes bulk taxonomy tagging incredibly easy. It works seamlessly with thousands of taxonomy tags.",
+        author: "Robert Chen",
+        role: "Product Manager, CMS Expert"
+      },
+      {
+        quote: "Saved us countless back-and-forth clicks inside Gutenberg pages. Content managers can filter terms in the spreadsheet view directly.",
+        author: "Sophia Alvarez",
+        role: "Head of Editorial Content"
+      }
+    ],
+    'stock-status': [
+      {
+        quote: feature.testimonialQuote || testimonialsMap[feature.id]?.quote || "My WooCommerce clients loved the immediate sold-out badges. Drastically slashed customer support emails asking about sizes.",
+        author: feature.testimonialAuthor || testimonialsMap[feature.id]?.author || "Mick Campbell",
+        role: feature.testimonialRole || testimonialsMap[feature.id]?.role || "WooCommerce Director, CraftFlow Agency"
+      },
+      {
+        quote: "Incredible UX enhancement! This visual indicator works flawlessly with variable products when inventory levels reach zero.",
+        author: "Elena Petrova",
+        role: "Shop Owner, WoolenGems"
+      },
+      {
+        quote: "We set low-stock warnings with this badge module. Customers checkout much faster now as it instills immediate scarcity.",
+        author: "Nils Sjöberg",
+        role: "Growth Marketer, Scandinavian Gear"
+      }
+    ],
+    'flash-sale': [
+      {
+        quote: feature.testimonialQuote || testimonialsMap[feature.id]?.quote || "Conversion rates peaked by 18% immediately after applying the flashing neon flash-sale badges to our Friday stock deals.",
+        author: feature.testimonialAuthor || testimonialsMap[feature.id]?.author || "Sarah Jenkins",
+        role: feature.testimonialRole || testimonialsMap[feature.id]?.role || "E-Commerce VP, GadgetHub"
+      },
+      {
+        quote: "The animated visual flash is extremely catchy! Traffic conversion increased on our landing listings right away.",
+        author: "David Kim",
+        role: "CRO Specialist, TrendyWear"
+      },
+      {
+        quote: "Highly responsive badge rendering that loads in milliseconds. Perfect for high-intensity traffic during shopping holidays.",
+        author: "Lucas Müller",
+        role: "DevOps Engineer, TechMart"
+      }
+    ],
+    'property-status': [
+      {
+        quote: feature.testimonialQuote || testimonialsMap[feature.id]?.quote || "We automatic-toggled our real estate properties. Status labels synced perfectly straight to custom map pins without lag.",
+        author: feature.testimonialAuthor || testimonialsMap[feature.id]?.author || "Ricardo Cruz",
+        role: feature.testimonialRole || testimonialsMap[feature.id]?.role || "CTO, Madrid Homes"
+      },
+      {
+        quote: "It instantly updates property listings to 'Under Offer'. No more manual database updates, making our site perfectly reliable.",
+        author: "Beatrice Webb",
+        role: "Operations, Prime Realty"
+      },
+      {
+        quote: "My real estate clients can easily filter through active properties in real-time. A vital feature for modern agencies.",
+        author: "Yusuf Kaan",
+        role: "Fullstack WordPress Developer"
+      }
+    ],
+    'featured-properties': [
+      {
+        quote: feature.testimonialQuote || testimonialsMap[feature.id]?.quote || "Paid real-estate listings sell premium placements 40% faster by keeping the high-contrast VIP badge floating elegantly.",
+        author: feature.testimonialAuthor || testimonialsMap[feature.id]?.author || "Samantha Black",
+        role: feature.testimonialRole || testimonialsMap[feature.id]?.role || "Ad Revenue Manager"
+      },
+      {
+        quote: "The highlighted card style looks absolutely stunning. Standard listings feel distinct, and premium clients happily pay the dynamic fee.",
+        author: "Gregory Peck",
+        role: "CEO, LuxEstates"
+      },
+      {
+        quote: "We saw premium listings subscription rate rise by 35% within just two weeks of launching these sleek gold status badges.",
+        author: "Monica Geller",
+        role: "Marketing Director, UrbanLiving"
+      }
+    ],
+    'applicant-count': [
+      {
+        quote: feature.testimonialQuote || testimonialsMap[feature.id]?.quote || "Applicants love transparency. Displaying the counter right on post cards doubled our click ratios this quarter.",
+        author: feature.testimonialAuthor || testimonialsMap[feature.id]?.author || "Daniel Vane",
+        role: feature.testimonialRole || testimonialsMap[feature.id]?.role || "HR Lead, BioHealth Corp"
+      },
+      {
+        quote: "Job searchers apply much faster when they see real-time urgency. A marvelous trigger for user actions.",
+        author: "Aisha Patel",
+        role: "Director of Talent, HireGlobal"
+      },
+      {
+        quote: "The count badge displays dynamically without page reloads. Simple hook implementation that works perfectly with Elementor.",
+        author: "Tom Fletcher",
+        role: "WP Solution Architect"
+      }
+    ],
+    'open-closed': [
+      {
+        quote: feature.testimonialQuote || testimonialsMap[feature.id]?.quote || "Our global community groups instantly verify active sessions. Displays glowing indicator rings exactly during live hours.",
+        author: feature.testimonialAuthor || testimonialsMap[feature.id]?.author || "Aris Thorne",
+        role: feature.testimonialRole || testimonialsMap[feature.id]?.role || "Community Manager, AlphaLabs"
+      },
+      {
+        quote: "We display real-time business status badge. No more confused clients arriving outside of our live support window.",
+        author: "Chloe Dubois",
+        role: "Support Director, Paris Clinic"
+      },
+      {
+        quote: "Perfect integration with local timezones. Highly flexible open-status badge renders accurately on mobile views too.",
+        author: "Sandro Rossi",
+        role: "Technical Lead, GastroHub"
+      }
+    ],
+    'urgent-hiring': [
+      {
+        quote: feature.testimonialQuote || testimonialsMap[feature.id]?.quote || "Urgent tags with animated visual pulses solved our seasonal driver workforce crisis inside 48 hours.",
+        author: feature.testimonialAuthor || testimonialsMap[feature.id]?.author || "Karim Al-Hussain",
+        role: feature.testimonialRole || testimonialsMap[feature.id]?.role || "Recruitment Supervisor, QuickLogistics"
+      },
+      {
+        quote: "The pulsing animation is eye-catching without being annoying. Conversion of applications increased significantly.",
+        author: "Jessica Winters",
+        role: "Talent Acquisition, DevTalent"
+      },
+      {
+        quote: "Extremely simple configuration but maximum impact. Fully responsive, highly customizable colors.",
+        author: "Takeshi Sato",
+        role: "Owner, TokyoStaffing"
+      }
+    ],
+    'remote-only': [
+      {
+        quote: feature.testimonialQuote || testimonialsMap[feature.id]?.quote || "A clean filter of remote-only postings kept over 10,000 developers fully engaged with our niche job directory.",
+        author: feature.testimonialAuthor || testimonialsMap[feature.id]?.author || "Tina Lin",
+        role: feature.testimonialRole || testimonialsMap[feature.id]?.role || "Operations Expert, DevRemote"
+      },
+      {
+        quote: "We added the glowing remote-work icon. Developers immediately praise the visual clarity and professional interface design.",
+        author: "Oliver Hanson",
+        role: "Community Lead, StackRemote"
+      },
+      {
+        quote: "Incredible filter performance. Clean CSS layout and SVG iconography works gracefully on all screen resolutions.",
+        author: "Emma Watson",
+        role: "UI Engineer, NomadClass"
+      }
+    ]
   };
+
+  const testimonialsList = multipleTestimonialsMap[feature.id] || [
+    {
+      quote: feature.testimonialQuote || "Integrating these custom display badges transformed how users visually explore status changes across our custom tables.",
+      author: feature.testimonialAuthor || "Alex Mercer",
+      role: feature.testimonialRole || "Senior Consultant, JetDevelopers"
+    },
+    {
+      quote: "Outstanding visual enhancements and flawless custom query structures. It elevated standard WordPress displays into high-end directories.",
+      author: "Samantha Drake",
+      role: "Lead UI Developer, WebCraft"
+    },
+    {
+      quote: "The absolute best extension module for JetEngine. Fully compatible with dynamic tags and custom callbacks.",
+      author: "Julius Caesar",
+      role: "Full Stack Engineer, Imperator Web"
+    }
+  ];
+
+  const featureTestimonial = testimonialsList[activeTestimonialIndex % testimonialsList.length];
 
   // Custom Real World use cases per feature
   const realWorldCases: Record<string, Array<{ title: string; subtitle: string; description: string; tag: string }>> = {
@@ -876,8 +1065,8 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
               </div>
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                <div className={`p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br ${feature.color} shadow-xl text-white shrink-0`}>
-                  <IconComponent className="w-7 h-7 sm:w-10 sm:h-10 md:w-12 md:h-12" />
+                <div className={`p-2.5 sm:p-3 md:p-3 lg:p-4 rounded-xl lg:rounded-2xl bg-gradient-to-br ${feature.color} shadow-xl text-white shrink-0`}>
+                  <IconComponent className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 lg:w-12 lg:h-12" />
                 </div>
                 <div>
                   <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-black text-slate-100 tracking-tight leading-tight">
@@ -913,16 +1102,16 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
             </div>
 
             {/* CTA action buttons neatly integrated in hero */}
-            <div className="flex flex-col sm:flex-row lg:flex-col gap-3.5 w-full lg:w-fit shrink-0 lg:min-w-[260px]">
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-3 sm:gap-4 lg:gap-5 w-full lg:w-fit shrink-0 lg:min-w-[260px]">
               <button 
                 onClick={() => setIsTutorialOpen(true)}
-                className="flex-1 px-6 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-500/10 cursor-pointer flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-3 sm:px-6 sm:py-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-[10px] sm:text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-500/10 cursor-pointer flex items-center justify-center gap-2 active:scale-95 duration-150"
               >
                 <Play className="w-4 h-4 text-emerald-300 animate-pulse fill-emerald-300" /> Watch Setup Guides
               </button>
               <button 
                 onClick={() => scrollToId('live-image-gallery')}
-                className="flex-1 px-6 py-4 rounded-2xl bg-slate-900/60 hover:bg-slate-900 hover:text-white text-slate-300 border border-slate-900/80 hover:border-slate-800 transition-all text-xs font-bold uppercase tracking-widest cursor-pointer font-sans"
+                className="flex-1 px-4 py-3 sm:px-6 sm:py-4 rounded-xl sm:rounded-2xl bg-slate-900/90 hover:bg-slate-800 hover:text-white text-slate-200 border border-slate-700/80 hover:border-slate-600 transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest cursor-pointer font-sans active:scale-95 duration-150 shadow-md"
               >
                 View Feature Gallery
               </button>
@@ -954,15 +1143,15 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
 
             {/* 1. CUSTOM SCREENSHOT GALLERY SHOWCASE (DYNAMIC EQUAL-SIZED PLOT) */}
             <div id="live-image-gallery" className="scroll-mt-24 space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-3">
                   <h2 className="text-xl font-display font-extrabold text-slate-100 flex items-center gap-2">
                     <Icons.Image className="w-5 h-5 text-blue-450" />
                     Feature Showcase Gallery
                   </h2>
-                  <p className="text-slate-400 text-sm mt-1">Real-world dashboard layouts and production interfaces. Hover over screenshots for context; click to expand high-fidelity views.</p>
+                  <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs font-mono text-blue-400 font-bold uppercase tracking-wider">{galleryImages.length} Screenshots</span>
                 </div>
-                <span className="self-start sm:self-center px-4 py-1 rounded-full bg-blue-500/5 border border-blue-500/10 text-xs font-mono text-blue-400/90 font-bold uppercase tracking-wider">{galleryImages.length} Screenshots</span>
+                <p className="text-slate-400 text-sm">Real-world dashboard layouts and production interfaces. Hover over screenshots for context; click to expand high-fidelity views.</p>
               </div>
 
               <div className="bg-slate-900/10 border border-slate-900/50 rounded-3xl p-6 md:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.3)] backdrop-blur-sm">
@@ -1134,19 +1323,55 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
             
             {/* Sidebar 1: Customer Testimonial Panel */}
             <div className="p-6 rounded-2xl bg-blue-950/10 border border-blue-950/30 relative overflow-hidden shadow-lg shadow-black/10">
-              <span className="text-xs font-bold text-blue-400/90 font-mono block uppercase tracking-wider">Customer Proof</span>
-              <p className="text-sm text-slate-355 italic mt-4 leading-relaxed font-light">
-                "{featureTestimonial.quote}"
-              </p>
-              <div className="flex items-center gap-3 mt-6 pt-4 border-t border-slate-900/60">
-                <div className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-sm font-bold font-mono text-slate-300 shrink-0">
-                  {featureTestimonial.author[0]}
-                </div>
-                <div>
-                  <h6 className="text-sm font-semibold text-slate-200">{featureTestimonial.author}</h6>
-                  <span className="text-xs text-slate-450 font-medium">{featureTestimonial.role}</span>
+              <div className="flex items-center justify-between pb-1 mb-2">
+                <span className="text-xs font-bold text-blue-400/90 font-mono block uppercase tracking-wider">Customer Proof</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    {((activeTestimonialIndex % testimonialsList.length) + 1)} / {testimonialsList.length}
+                  </span>
+                  <div className="flex gap-1.5">
+                    <button 
+                      onClick={() => setActiveTestimonialIndex(prev => (prev - 1 + testimonialsList.length) % testimonialsList.length)}
+                      className="p-1 rounded bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white transition-all border border-slate-800 cursor-pointer active:scale-90"
+                      aria-label="Previous Testimonial"
+                    >
+                      <ChevronLeft className="w-3 h-3" />
+                    </button>
+                    <button 
+                      onClick={() => setActiveTestimonialIndex(prev => (prev + 1) % testimonialsList.length)}
+                      className="p-1 rounded bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white transition-all border border-slate-800 cursor-pointer active:scale-90"
+                      aria-label="Next Testimonial"
+                    >
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               </div>
+
+              {/* Animating the switching testimonials cleanly */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTestimonialIndex % testimonialsList.length}
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-4"
+                >
+                  <p className="text-sm text-slate-355 italic leading-relaxed font-light min-h-[70px]">
+                    "{featureTestimonial.quote}"
+                  </p>
+                  <div className="flex items-center gap-3 pt-3 border-t border-slate-900/60">
+                    <div className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-sm font-bold font-mono text-slate-350 shrink-0">
+                      {featureTestimonial.author[0]}
+                    </div>
+                    <div>
+                      <h6 className="text-sm font-semibold text-slate-200">{featureTestimonial.author}</h6>
+                      <span className="text-xs text-slate-450 font-medium">{featureTestimonial.role}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
             </div>
 
             {/* Sidebar 2: Requirements Matrix Table */}
@@ -1229,10 +1454,10 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
             <div className="absolute top-0 right-0 w-44 h-44 bg-blue-500/10 blur-3xl pointer-events-none rounded-full" />
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/5 blur-2xl pointer-events-none rounded-full" />
 
-            <div className="max-w-2xl mx-auto space-y-5">
-              <span className="px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs font-mono font-bold uppercase tracking-widest rounded-full">Pro Upgrade Offer</span>
-              <h3 className="text-3xl md:text-4xl font-display font-black text-white tracking-tight">Equip Your Site With PostStatus Pro</h3>
-              <p className="text-base text-slate-300 leading-relaxed max-w-xl mx-auto font-light">
+            <div className="max-w-2xl mx-auto flex flex-col items-center">
+              <span className="inline-flex px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs font-mono font-bold uppercase tracking-widest rounded-full mb-6">Pro Upgrade Offer</span>
+              <h3 className="text-3xl md:text-4xl font-display font-black text-white tracking-tight leading-tight">Equip Your Site With PostStatus Pro</h3>
+              <p className="text-base text-slate-300 leading-relaxed max-w-xl mx-auto font-light mt-4">
                 Get full access to "{feature.title}" plus all other backend tables and custom badges taxonomy modules. Elevate how your WordPress site operates today.
               </p>
             </div>
@@ -1248,13 +1473,13 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
                     if (pr) pr.scrollIntoView({ behavior: 'smooth' });
                   }, 200);
                 }}
-                className="w-full sm:w-auto text-center px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-blue-500/15"
+                className="w-full sm:w-auto text-center px-4 py-3 sm:px-8 sm:py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-[10px] sm:text-xs uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-blue-500/15 active:scale-95 duration-150"
               >
                 Upgrade Plan Now
               </a>
               <button 
                 onClick={onBack}
-                className="w-full sm:w-auto px-7 py-4 rounded-xl bg-slate-950 border border-slate-800 hover:bg-slate-900 hover:text-white text-slate-300 font-bold text-xs uppercase tracking-widest transition-all cursor-pointer"
+                className="w-full sm:w-auto px-4 py-3 sm:px-7 sm:py-4 rounded-xl bg-slate-950 border border-slate-800 hover:bg-slate-900 hover:text-white text-slate-300 font-bold text-[10px] sm:text-xs uppercase tracking-widest transition-all cursor-pointer active:scale-95 duration-150"
               >
                 Continue Browsing
               </button>
@@ -1364,7 +1589,7 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
               animate={{ scale: 1 }}
               exit={{ scale: 0.96 }}
               transition={{ duration: 0.25 }}
-              className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-6xl h-[85vh] md:h-[80vh] flex flex-col overflow-hidden shadow-2xl relative"
+              className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-6xl h-[90vh] lg:h-[80vh] flex flex-col overflow-hidden shadow-2xl relative"
               onClick={e => e.stopPropagation()}
             >
               {/* Modal Header */}
@@ -1387,11 +1612,11 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
               </div>
 
               {/* Modal Core Split-Screen Body */}
-              <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+              <div className="flex-1 overflow-y-auto lg:overflow-hidden flex flex-col lg:grid lg:grid-cols-12 min-h-0">
                 
                 {/* Left side: Video Showcase Theater (8 cols) */}
-                <div className="lg:col-span-8 bg-black/40 p-4 md:p-6 flex flex-col justify-between overflow-y-auto">
-                  <div key={tutorialPlaylist[activeTutorialIndex].url} className="w-full aspect-video rounded-2xl overflow-hidden border border-slate-850 shadow-2xl bg-slate-950">
+                <div className="w-full lg:col-span-8 bg-black/40 p-4 sm:p-5 md:p-6 flex flex-col lg:justify-between lg:overflow-y-auto shrink-0 min-h-0">
+                  <div key={tutorialPlaylist[activeTutorialIndex].url} className="w-full rounded-2xl overflow-hidden border border-slate-850 shadow-2xl bg-slate-950 shrink-0">
                     <PremiumVideoPlayer 
                       videoUrl={tutorialPlaylist[activeTutorialIndex].url}
                       title={tutorialPlaylist[activeTutorialIndex].title}
@@ -1400,7 +1625,7 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
                   </div>
 
                   {/* Curated Video Title Cards */}
-                  <div className="text-left mt-5 bg-slate-950/40 border border-slate-855 p-4 rounded-xl">
+                  <div className="text-left mt-5 bg-slate-950/40 border border-slate-855 p-4 rounded-xl shrink-0">
                     <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-mono font-bold uppercase tracking-wider inline-block mb-1.5 font-mono">
                       Playing Tutorial Episode #{activeTutorialIndex + 1}
                     </span>
@@ -1412,7 +1637,7 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
                 </div>
 
                 {/* Right side: Interactive Playlist Selector (4 cols) */}
-                <div className="lg:col-span-4 border-t lg:border-t-0 lg:border-l border-slate-800 bg-slate-950/60 p-4 md:p-6 flex flex-col overflow-y-auto">
+                <div className="w-full lg:col-span-4 border-t lg:border-t-0 lg:border-l border-slate-800 bg-slate-950/60 p-4 sm:p-5 md:p-6 flex flex-col lg:overflow-y-auto shrink-0 min-h-0">
                   <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-850">
                     <h5 className="text-xs font-bold text-slate-350 uppercase tracking-wider font-mono flex items-center gap-2 font-mono">
                       <Icons.List className="w-4 h-4 text-blue-400" />

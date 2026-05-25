@@ -5,7 +5,7 @@ import { useData } from '../context/DataContext';
 
 export default function Pricing() {
   const [billingCycle, setBillingCycle] = useState<'annual' | 'lifetime'>('annual');
-  const { pricingPlans } = useData();
+  const { pricingPlans, settings } = useData();
 
   // Filter plans based on selected period
   const activePlans = pricingPlans.filter(plan => plan.period === billingCycle);
@@ -14,9 +14,11 @@ export default function Pricing() {
     <section id="pricing" className="py-24 bg-slate-950 relative">
       <div className="max-w-[1320px] mx-auto px-[15px] sm:px-[20px] lg:px-[40px]">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-5xl font-display font-bold mb-6">Choose Your Plan</h2>
+          <h2 className="text-3xl md:text-5xl font-display font-bold mb-6">
+            {settings.pricingSectionTitle || 'Choose Your Plan'}
+          </h2>
           <p className="text-slate-400 text-lg max-w-2xl mx-auto mb-10">
-            Simple, transparent pricing. Enhance your JetEngine projects today.
+            {settings.pricingSectionSubtitle || 'Simple, transparent pricing. Enhance your WordPress and JetEngine projects today.'}
           </p>
           
           {/* Billing Toggle */}
@@ -37,7 +39,7 @@ export default function Pricing() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto justify-center">
           {activePlans.map((plan, index) => (
             <motion.div
               key={plan.id}
@@ -45,7 +47,7 @@ export default function Pricing() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className={`relative rounded-3xl bg-slate-900 border transition-all duration-300 ${plan.popular ? 'border-amber-500/20 shadow-[0_15px_45px_rgba(245,158,11,0.08)] transform md:-translate-y-4' : 'border-slate-900/80 hover:border-slate-800 shadow-[0_8px_32px_rgba(0,0,0,0.55)] hover:shadow-[0_15px_45px_rgba(0,0,0,0.7)]'} p-8 flex flex-col`}
+              className={`relative w-full rounded-3xl bg-slate-900 border transition-all duration-300 ${plan.popular ? 'border-amber-500/20 shadow-[0_15px_45px_rgba(245,158,11,0.08)] transform lg:-translate-y-4' : 'border-slate-900/80 hover:border-slate-800 shadow-[0_8px_32px_rgba(0,0,0,0.55)] hover:shadow-[0_15px_45px_rgba(0,0,0,0.7)]'} p-8 flex flex-col`}
             >
               {plan.popular && (
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -81,7 +83,7 @@ export default function Pricing() {
                 ))}
               </ul>
               
-              <button className={`w-full py-4 rounded-xl font-medium transition-all cursor-pointer ${
+              <button className={`w-full py-2.5 sm:py-4 px-4 rounded-lg sm:rounded-xl text-xs sm:text-base font-medium transition-all cursor-pointer active:scale-95 ${
                 plan.popular 
                   ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]' 
                   : 'bg-slate-800 hover:bg-slate-700 text-white' 

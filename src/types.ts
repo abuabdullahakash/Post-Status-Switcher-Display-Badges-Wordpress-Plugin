@@ -70,4 +70,15 @@ export interface SiteSettings {
   heroImageUrl?: string;
   adminName?: string;
   adminAvatarUrl?: string;
+  pluginDownloadUrl?: string;
+  
+  // Custom Section Headings & Badges Settings
+  ctaButtonText?: string;
+  featuresSectionTitle?: string;
+  featuresSectionSubtitle?: string;
+  faqSectionTitle?: string;
+  faqSectionSubtitle?: string;
+  pricingSectionTitle?: string;
+  pricingSectionSubtitle?: string;
+  footerCopyrightText?: string;
 }

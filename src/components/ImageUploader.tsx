@@ -7,9 +7,10 @@ interface ImageUploaderProps {
   label?: string;
   className?: string;
   presetUrl?: string;
+  compact?: boolean;
 }
 
-export default function ImageUploader({ onUploadSuccess, label, className = "", presetUrl }: ImageUploaderProps) {
+export default function ImageUploader({ onUploadSuccess, label, className = "", presetUrl, compact = false }: ImageUploaderProps) {
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -179,7 +180,7 @@ export default function ImageUploader({ onUploadSuccess, label, className = "", 
   };
 
   return (
-    <div className={`space-y-4 ${className}`} ref={containerRef}>
+    <div className={`space-y-3.5 ${className}`} ref={containerRef}>
       {label && (
         <span className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
           {label}
@@ -193,12 +194,14 @@ export default function ImageUploader({ onUploadSuccess, label, className = "", 
         onDragLeave={handleDrag}
         onDrop={handleDrop}
         onClick={onZoneClick}
-        className={`relative rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition-all duration-300 ${
+        className={`relative rounded-2xl transition-all duration-300 ${
+          compact ? 'border border-dashed p-3' : 'border-2 border-dashed p-6 text-center shadow-lg shadow-black/10'
+        } ${
           dragActive 
-            ? 'border-blue-500 bg-blue-500/5' 
+            ? 'border-blue-500 bg-blue-500/5 shadow-blue-500/5' 
             : resultUrl 
-              ? 'border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10' 
-              : 'border-slate-800 bg-slate-900/60 hover:border-slate-700 hover:bg-slate-900'
+              ? 'border-emerald-500/10 bg-emerald-500/5 hover:border-emerald-500/20' 
+              : 'border-slate-800 bg-slate-900/10 hover:border-slate-800/70 hover:bg-slate-900/20'
         }`}
       >
         <input 
@@ -216,13 +219,12 @@ export default function ImageUploader({ onUploadSuccess, label, className = "", 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="py-6 flex flex-col items-center justify-center space-y-3"
+              className={`flex flex-col items-center justify-center space-y-1.5 ${compact ? 'py-1' : 'py-6 space-y-3'}`}
             >
-              <div className="p-3 bg-blue-500/10 rounded-full border border-blue-500/20 text-blue-400 animate-spin">
-                <RefreshCw className="w-5 h-5" />
+              <div className="p-1.5 bg-blue-500/10 rounded-full text-blue-400 animate-spin">
+                <RefreshCw className="w-4 h-4" />
               </div>
-              <p className="text-sm font-semibold text-white">Uploading to ImgBB server...</p>
-              <p className="text-xs text-slate-500">Storing image securely and generating live CDN URL...</p>
+              <p className="text-[11px] font-semibold text-white">Uploading to secure server...</p>
             </motion.div>
           ) : resultUrl ? (
             <motion.div 
@@ -230,60 +232,99 @@ export default function ImageUploader({ onUploadSuccess, label, className = "", 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-col md:flex-row items-center gap-5 text-left p-2"
+              className="w-full text-left"
               onClick={(e) => e.stopPropagation()} // Stop click on widget from triggering file chooser
             >
-              <div className="w-24 h-24 rounded-lg overflow-hidden bg-slate-950 border border-slate-800 shrink-0 relative group">
-                <img 
-                  src={resultUrl} 
-                  alt="Uploaded Asset" 
-                  className="w-full h-full object-cover" 
-                  referrerPolicy="no-referrer"
-                />
-                <a 
-                  href={resultUrl} 
-                  target="_blank" 
-                  rel="noreferrer" 
-                  className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white"
-                >
-                  <Eye className="w-4 h-4" />
-                </a>
-              </div>
-              
-              <div className="flex-1 min-w-0 space-y-2 w-full">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400 font-mono">Upload Success (ImgBB)</span>
-                  <button 
-                    onClick={clearUpload}
-                    className="p-1 px-2 hover:bg-red-500/10 hover:text-red-400 text-slate-500 border border-transparent hover:border-red-500/20 rounded font-medium text-[10px] transition-all flex items-center gap-1 cursor-pointer"
-                  >
-                    <Trash2 className="w-3 h-3" /> Clear Image
-                  </button>
+              {compact ? (
+                <div className="flex items-center gap-4 w-full">
+                  <div className="relative group w-14 h-14 rounded-xl overflow-hidden bg-slate-900 border border-slate-800/80 shadow-lg shrink-0">
+                    <img 
+                      src={resultUrl} 
+                      alt="Uploaded Asset" 
+                      className="w-full h-full object-cover" 
+                      referrerPolicy="no-referrer"
+                    />
+                    <a 
+                      href={resultUrl} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white"
+                      title="View full image"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Active Image
+                    </span>
+                    <p className="text-xs text-slate-400 mt-1 font-medium truncate max-w-[220px]" title={resultUrl}>
+                      {resultUrl.split('/').pop() || 'uploaded_image.png'}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={onZoneClick}
+                        className="px-2.5 py-1 text-[10px] font-semibold bg-slate-900 border border-slate-800/80 text-slate-350 hover:text-white rounded-lg transition-all cursor-pointer"
+                      >
+                        Replace Image
+                      </button>
+                      <button
+                        type="button"
+                        onClick={clearUpload}
+                        className="px-2.5 py-1 text-[10px] font-semibold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/10 hover:border-rose-500/20 text-rose-450 rounded-lg transition-all cursor-pointer"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="flex bg-slate-950 border border-slate-800 rounded-xl overflow-hidden p-1">
-                  <span className="flex-1 font-mono text-xs text-slate-400 px-3 py-2 truncate select-all">
-                    {resultUrl}
-                  </span>
-                  <button 
-                    onClick={copyToClipboard}
-                    className={`px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 text-xs font-semibold transition-all shrink-0 ${copied ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800'}`}
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="w-3.5 h-3.5" />
-                        Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        Copy Link
-                      </>
-                    )}
-                  </button>
+              ) : (
+                <div className="flex flex-col md:flex-row gap-5 p-2 items-center">
+                  <div className="w-24 h-24 rounded-lg overflow-hidden bg-slate-950 border border-slate-800/60 shrink-0 relative group">
+                    <img 
+                      src={resultUrl} 
+                      alt="Uploaded Asset" 
+                      className="w-full h-full object-cover" 
+                      referrerPolicy="no-referrer"
+                    />
+                    <a 
+                      href={resultUrl} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                  
+                  <div className="flex-1 min-w-0 space-y-1 w-full">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 font-mono">Uploaded</span>
+                      <button 
+                        onClick={clearUpload}
+                        className="p-1 px-1.5 hover:bg-red-500/15 hover:text-red-400 text-slate-500 border border-transparent hover:border-red-500/20 rounded font-semibold text-[9px] transition-all flex items-center gap-1 cursor-pointer"
+                      >
+                        <Trash2 className="w-2.5 h-2.5" /> Clear
+                      </button>
+                    </div>
+                    
+                    <div className="flex bg-slate-950 border border-slate-800/60 rounded-xl overflow-hidden p-0.5 shadow-inner">
+                      <span className="flex-1 font-mono text-[10px] text-slate-450 px-2 py-1.5 truncate select-all">
+                        {resultUrl}
+                      </span>
+                      <button 
+                        onClick={copyToClipboard}
+                        className={`px-2 py-1 rounded-lg flex items-center justify-center gap-1 text-[10px] font-semibold transition-all shrink-0 ${copied ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800'}`}
+                      >
+                        {copied ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-[10px] text-slate-500 italic">This CDN link will load anywhere instantly. Firebase document only records this simple string.</p>
-              </div>
+              )}
             </motion.div>
           ) : (
             <motion.div 
@@ -291,16 +332,22 @@ export default function ImageUploader({ onUploadSuccess, label, className = "", 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="py-4 space-y-2"
+              className={`flex items-center ${compact ? 'py-1.5 justify-center gap-2 text-slate-400 group hover:text-blue-400 transition-colors' : 'flex-col py-4 space-y-2'}`}
             >
-              <div className="w-12 h-12 rounded-full bg-slate-955 border border-slate-800 flex items-center justify-center mx-auto mb-2 text-slate-400 group-hover:text-blue-400 transition-colors">
-                <Upload className="w-5 h-5" />
+              <div className={`${compact ? 'w-7 h-7 rounded-lg' : 'w-12 h-12 rounded-full mb-2'} bg-slate-900/40 border border-slate-800/60 flex items-center justify-center text-slate-400 group-hover:text-blue-400 transition-colors shrink-0`}>
+                <Upload className="w-4 h-4" />
               </div>
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-white">
-                  Drag and drop, paste <kbd className="bg-slate-900 px-1 py-0.5 rounded text-[11px] border border-slate-800 font-mono text-slate-400">Ctrl+V</kbd> or <span className="text-blue-400 group-hover:text-blue-300 underline underline-offset-2">browse files</span>
+              <div className={compact ? "text-left" : "space-y-1 text-center"}>
+                <p className="text-xs font-semibold text-slate-300">
+                  {compact ? (
+                    <span>Click or drop logo to upload</span>
+                  ) : (
+                    <span>
+                      Drag and drop, paste <kbd className="bg-slate-900 px-1 py-0.5 rounded text-[10px] border border-slate-800 font-mono text-slate-400">Ctrl+V</kbd> or <span className="text-blue-400 group-hover:text-blue-300 underline underline-offset-2">browse files</span>
+                    </span>
+                  )}
                 </p>
-                <p className="text-xs text-slate-500">Supports PNG, JPG, JPEG, GIF, SVG or WEBP (Max 32MB)</p>
+                {!compact && <p className="text-xs text-slate-500">Supports PNG, JPG, JPEG, GIF, SVG or WEBP (Max 32MB)</p>}
               </div>
             </motion.div>
           )}
@@ -315,7 +362,7 @@ export default function ImageUploader({ onUploadSuccess, label, className = "", 
       </div>
 
       {/* Clipboard paste utility notice */}
-      {!resultUrl && !loading && (
+      {!resultUrl && !loading && !compact && (
         <p className="text-[11px] text-slate-500 flex items-center justify-center gap-1.5 text-center font-medium">
           <Clipboard className="w-3.5 h-3.5 text-slate-600 animate-pulse" />
           <span>Need magic? Try copying any snapshot from your clipboard and paste (<kbd className="font-mono text-slate-400 bg-slate-900 border border-slate-800 px-1 rounded">Ctrl+V</kbd>) here!</span>
@@ -324,15 +371,15 @@ export default function ImageUploader({ onUploadSuccess, label, className = "", 
 
       {/* Recent Uploads Row (Session history) */}
       {recentUploads.length > 0 && (
-        <div className="space-y-2 pt-2 border-t border-slate-900/60 text-left">
+        <div className={`space-y-1.5 pt-2 border-t border-slate-900/40 text-left`}>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-              <ImageIcon className="w-3.5 h-3.5 text-slate-500" />
-              Session Upload Gallery ({recentUploads.length})
+            <span className="text-[10px] font-bold text-slate-550 uppercase tracking-widest flex items-center gap-1">
+              <ImageIcon className="w-3 h-3 text-slate-550" />
+              Recent uploads
             </span>
           </div>
 
-          <div className="flex flex-wrap gap-2.5 p-1">
+          <div className="flex flex-wrap gap-1.5 p-1">
             {recentUploads.map((url, index) => (
               <div 
                 key={`${url}-${index}`}
@@ -340,17 +387,19 @@ export default function ImageUploader({ onUploadSuccess, label, className = "", 
                   setResultUrl(url);
                   if (onUploadSuccess) onUploadSuccess(url);
                 }}
-                className={`group relative w-12 h-12 rounded-lg border bg-slate-950 overflow-hidden cursor-pointer transition-all ${resultUrl === url ? 'border-blue-500 scale-105 shadow-[0_0_10px_rgba(59,130,246,0.3)]' : 'border-slate-800 hover:border-slate-700'}`}
+                className={`group relative ${compact ? 'w-8 h-8 rounded-md' : 'w-12 h-12 rounded-lg'} border bg-slate-950 overflow-hidden cursor-pointer transition-all ${resultUrl === url ? 'border-blue-500 scale-105' : 'border-slate-850 hover:border-slate-800'}`}
                 title="Click to apply this link"
               >
                 <img src={url} alt={`Upload ${index}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                <button 
-                  onClick={(e) => deleteRecentItem(url, e)}
-                  className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-slate-950 hover:bg-red-500 text-slate-400 hover:text-white flex items-center justify-center border border-slate-800 text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                  title="Remove from history"
-                >
-                  &times;
-                </button>
+                {!compact && (
+                  <button 
+                    onClick={(e) => deleteRecentItem(url, e)}
+                    className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-slate-950 hover:bg-red-500 text-slate-400 hover:text-white flex items-center justify-center border border-slate-800 text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    title="Remove from history"
+                  >
+                    &times;
+                  </button>
+                )}
               </div>
             ))}
           </div>

@@ -31,17 +31,17 @@ const steps = [
         <p className="text-slate-300 leading-relaxed">
           Not all post types need status switching. Easily assign the toggling capabilities only to the Custom Post Types (CPTs) or Products that require it.
         </p>
-        <div className="rounded-lg bg-slate-800/50 border border-slate-700 p-6 flex items-center justify-center">
+        <div className="rounded-lg bg-slate-800/50 border border-slate-700 p-4 sm:p-6 flex items-center justify-center">
           <div className="w-full max-w-sm space-y-3">
-            <div className="flex items-center justify-between p-3 rounded bg-slate-900 border border-slate-700">
-              <span className="text-sm font-medium">Properties (CPT)</span>
-              <div className="w-10 h-5 bg-blue-500 rounded-full flex items-center px-1 justify-end">
+            <div className="flex items-center justify-between p-3 rounded bg-slate-900 border border-slate-700 gap-2">
+              <span className="text-xs sm:text-sm font-medium">Properties (CPT)</span>
+              <div className="w-10 h-5 bg-blue-500 rounded-full flex items-center px-1 justify-end shrink-0">
                 <div className="w-3 h-3 bg-white rounded-full"></div>
               </div>
             </div>
-            <div className="flex items-center justify-between p-3 rounded bg-slate-900 border border-slate-700">
-              <span className="text-sm font-medium">Job Applications (CPT)</span>
-              <div className="w-10 h-5 bg-blue-500 rounded-full flex items-center px-1 justify-end">
+            <div className="flex items-center justify-between p-3 rounded bg-slate-900 border border-slate-700 gap-2">
+              <span className="text-xs sm:text-sm font-medium">Job Applications (CPT)</span>
+              <div className="w-10 h-5 bg-blue-500 rounded-full flex items-center px-1 justify-end shrink-0">
                 <div className="w-3 h-3 bg-white rounded-full"></div>
               </div>
             </div>
@@ -60,14 +60,14 @@ const steps = [
         <p className="text-slate-300 leading-relaxed">
           Drag and drop standard Elementor widgets and populate them dynamically. Use the custom <strong>"JESS Feature Badge"</strong> and <strong>"JESS Status Expiration Timer"</strong> tags.
         </p>
-        <div className="rounded-lg bg-slate-950 border border-slate-800 p-4 font-mono text-sm flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded">Dynamic Tag</span>
-            <span className="text-slate-400">&rarr; JESS Feature Badge</span>
+        <div className="rounded-lg bg-slate-950 border border-slate-800 p-3 sm:p-4 font-mono text-sm flex flex-col gap-2">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded text-[10px] sm:text-xs">Dynamic Tag</span>
+            <span className="text-slate-400 text-xs sm:text-sm break-all">&rarr; JESS Feature Badge</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded">Dynamic Tag</span>
-            <span className="text-slate-400">&rarr; JESS Expiration Timer</span>
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded text-[10px] sm:text-xs">Dynamic Tag</span>
+            <span className="text-slate-400 text-xs sm:text-sm break-all">&rarr; JESS Expiration Timer</span>
           </div>
         </div>
       </div>
@@ -119,7 +119,7 @@ export default function Documentation() {
                 <button
                   key={step.id}
                   onClick={() => setActiveStep(step.id)}
-                  className={`w-full flex items-start gap-4 p-5 rounded-xl transition-all duration-300 text-left ${isActive ? 'bg-slate-800 border border-slate-700 shadow-lg' : 'bg-transparent border border-transparent hover:bg-slate-800/50'}`}
+                  className={`w-full flex items-start gap-3 sm:gap-4 p-3.5 sm:p-5 rounded-lg sm:rounded-xl transition-all duration-300 text-left ${isActive ? 'bg-slate-800 border border-slate-700 shadow-lg' : 'bg-transparent border border-transparent hover:bg-slate-800/50'}`}
                 >
                   <div className={`shrink-0 p-2 rounded-lg flex items-center justify-center ${isActive ? 'bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]' : 'bg-slate-800 text-slate-400'}`}>
                     <Icon className="w-5 h-5" />
@@ -140,7 +140,7 @@ export default function Documentation() {
 
           {/* Content Area */}
           <div className="w-full lg:w-2/3">
-            <div className="h-full rounded-2xl bg-slate-950 border border-slate-800 p-8 md:p-12 shadow-2xl relative overflow-hidden">
+            <div className="h-full rounded-2xl bg-slate-950 border border-slate-800 p-5 sm:p-8 md:p-12 shadow-2xl relative overflow-hidden">
               {/* Design Elements */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] pointer-events-none"></div>
               

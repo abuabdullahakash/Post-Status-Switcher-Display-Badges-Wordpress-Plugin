@@ -5,17 +5,17 @@ import { useData } from '../context/DataContext';
 
 export default function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
-  const { faqs } = useData();
+  const { faqs, settings } = useData();
 
   return (
     <section id="faq" className="py-24 bg-slate-900 border-y border-slate-800">
       <div className="max-w-4xl mx-auto px-[15px] sm:px-[20px] lg:px-[40px]">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-5xl font-display font-bold mb-6">
-            Frequently Asked <span className="text-gradient">Questions</span>
+            {settings.faqSectionTitle || 'Frequently Asked Questions'}
           </h2>
           <p className="text-slate-400 text-lg">
-            Everything you need to know about the product and billing.
+            {settings.faqSectionSubtitle || 'Everything you need to know about the product and billing.'}
           </p>
         </div>
 
