@@ -972,7 +972,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
               {/* FEATURES TAB */}
               {activeTab === 'features' && (
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center bg-slate-950 p-5 rounded-2xl border border-slate-900">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 bg-slate-950 p-5 rounded-2xl border border-slate-900">
                     <div>
                       <h3 className="text-xl font-display font-bold text-white flex items-center gap-2">
                         <Icons.Sparkles className="w-5 h-5 text-blue-400" />
@@ -980,14 +980,14 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                       </h3>
                       <p className="text-sm text-slate-400 mt-1">Enable, disable, update badges, icons, gradients or use-cases of the 16 features grid.</p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                       {pendingCreates.length > 0 && (
                         <button
                           type="button"
                           onClick={() => setShowPendingCreatesModal(true)}
-                          className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl bg-red-650 hover:bg-red-600 text-white font-bold text-xs shadow-lg transition-all animate-pulse select-none cursor-pointer"
+                          className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl bg-red-650 hover:bg-red-600 text-white font-bold text-xs shadow-lg transition-all animate-pulse select-none cursor-pointer"
                         >
-                          <Icons.BellRing className="w-4 h-4 animate-bounce" />
+                          <Icons.BellRing className="w-4 h-4 animate-bounce shrink-0" />
                           <span>New post ({pendingCreates.length})</span>
                         </button>
                       )}
@@ -996,9 +996,9 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                           setIsAddingFeature(true);
                           setEditingFeature(null);
                         }}
-                        className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg transition-all"
+                        className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg transition-all cursor-pointer"
                       >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-4 h-4 shrink-0" />
                         Add New Feature
                       </button>
                     </div>
@@ -1009,7 +1009,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       onSubmit={handleSaveFeature}
-                      className="p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-4"
+                      className="p-4 sm:p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-4"
                     >
                       <div className="flex justify-between items-center pb-3 border-b border-slate-900">
                         <h4 className="font-bold text-white text-sm flex items-center gap-1.5">
@@ -1421,7 +1421,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       onSubmit={handleCreateFeature}
-                      className="p-6 rounded-2xl bg-slate-950 border border-emerald-500/20 space-y-4 shadow-xl shadow-emerald-500/5"
+                      className="p-4 sm:p-6 rounded-2xl bg-slate-950 border border-emerald-500/20 space-y-4 shadow-xl shadow-emerald-500/5"
                     >
                       <div className="flex justify-between items-center pb-3 border-b border-slate-900">
                         <h4 className="font-bold text-white text-sm flex items-center gap-2">
@@ -2000,8 +2000,8 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                         </div>
                       ) : (
                         /* SPREADSHEET TABLE row layout mode for List view! */
-                        <div className="bg-slate-950 border border-slate-900 rounded-2xl overflow-hidden shadow-xl animate-fade-in">
-                          <table className="w-full text-left text-xs border-collapse">
+                        <div className="bg-slate-950 border border-slate-900 rounded-2xl overflow-hidden shadow-xl animate-fade-in overflow-x-auto hide-scrollbar">
+                          <table className="w-full text-left text-xs border-collapse whitespace-nowrap min-w-[800px]">
                             <thead>
                               <tr className="bg-slate-900/80 border-b border-slate-850 text-slate-400 font-semibold tracking-wider uppercase text-[10px]">
                                 <th className="p-4 pl-6">Order</th>
@@ -2133,7 +2133,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       onSubmit={handleSavePlan}
-                      className="p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-4"
+                      className="p-4 sm:p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-4"
                     >
                       <h4 className="font-bold text-white text-sm">Editing Plan: {editingPlan.name} ({editingPlan.period})</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2219,7 +2219,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                     {pricingPlans.map((plan) => (
                       <div 
                         key={plan.id}
-                        className={`p-6 rounded-2xl bg-slate-950 border transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.7)] ${plan.popular ? 'border-amber-500/20 shadow-amber-500/5' : 'border-slate-900 hover:border-slate-805'} flex flex-col justify-between`}
+                        className={`p-4 sm:p-6 rounded-2xl bg-slate-950 border transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.7)] ${plan.popular ? 'border-amber-500/20 shadow-amber-500/5' : 'border-slate-900 hover:border-slate-805'} flex flex-col justify-between`}
                       >
                         <div>
                           <div className="flex justify-between items-start mb-4">
@@ -2280,7 +2280,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       onSubmit={handleAddFAQSubmit}
-                      className="p-6 rounded-2xl bg-slate-950 border border-blue-500/20 space-y-4"
+                      className="p-4 sm:p-6 rounded-2xl bg-slate-950 border border-blue-500/20 space-y-4"
                     >
                       <div className="flex justify-between items-center">
                         <h4 className="font-bold text-white text-sm">Add New FAQ</h4>
@@ -2340,7 +2340,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       onSubmit={handleUpdateFAQSubmit}
-                      className="p-6 rounded-2xl bg-slate-950 border border-blue-500/20 space-y-4"
+                      className="p-4 sm:p-6 rounded-2xl bg-slate-950 border border-blue-500/20 space-y-4"
                     >
                       <div className="flex justify-between items-center">
                         <h4 className="font-bold text-white text-sm">Update FAQ Item</h4>
@@ -2439,82 +2439,82 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                   </div>
 
                   {/* INTERNAL SETTINGS TABS BUTTONS */}
-                  <div className="flex flex-wrap md:flex-nowrap items-center gap-1.5 p-1.5 bg-slate-900/60 border border-slate-900/40 rounded-2xl w-full md:w-max shadow-inner">
+                  <div className="flex md:flex-nowrap items-center gap-1.5 p-1.5 bg-slate-900/60 border border-slate-900/40 rounded-2xl w-full md:w-max shadow-inner overflow-x-auto hide-scrollbar">
                     <button
                       type="button"
                       onClick={() => setSettingsSubTab('identity')}
-                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
                         settingsSubTab === 'identity' 
                           ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10' 
                           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
                       }`}
                     >
-                      <Icons.Globe className="w-3.5 h-3.5" />
+                      <Icons.Globe className="w-3.5 h-3.5 shrink-0" />
                       Brand & Visuals
                     </button>
                     <button
                       type="button"
                       onClick={() => setSettingsSubTab('hero')}
-                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
                         settingsSubTab === 'hero' 
                           ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10' 
                           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
                       }`}
                     >
-                      <Icons.Home className="w-3.5 h-3.5" />
+                      <Icons.Home className="w-3.5 h-3.5 shrink-0" />
                       Hero Canvas
                     </button>
                     <button
                       type="button"
                       onClick={() => setSettingsSubTab('marketing')}
-                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
                         settingsSubTab === 'marketing' 
                           ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10' 
                           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
                       }`}
                     >
-                      <Icons.Sparkles className="w-3.5 h-3.5" />
+                      <Icons.Sparkles className="w-3.5 h-3.5 shrink-0" />
                       Page Sections
                     </button>
                     <button
                       type="button"
                       onClick={() => setSettingsSubTab('download')}
-                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
                         settingsSubTab === 'download' 
                           ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10' 
                           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
                       }`}
                     >
-                      <Icons.Download className="w-3.5 h-3.5" />
+                      <Icons.Download className="w-3.5 h-3.5 shrink-0" />
                       Engine Assets & Admin
                     </button>
                     <button
                       type="button"
                       onClick={() => setSettingsSubTab('smtp')}
-                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
                         settingsSubTab === 'smtp' 
                           ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10' 
                           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
                       }`}
                     >
-                      <Icons.Mail className="w-3.5 h-3.5" />
+                      <Icons.Mail className="w-3.5 h-3.5 shrink-0" />
                       SMTP & Mail
                     </button>
                     <button
                       type="button"
                       onClick={() => setSettingsSubTab('danger')}
-                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
                         settingsSubTab === 'danger' 
                           ? 'bg-rose-950/80 text-rose-200 border border-rose-900/30' 
                           : 'text-slate-400 hover:text-rose-450 hover:bg-rose-950/20'
                       }`}
                     >
-                      <Icons.AlertCircle className="w-3.5 h-3.5" />
+                      <Icons.AlertCircle className="w-3.5 h-3.5 shrink-0" />
                       Maintenance Center
                     </button>
                   </div>
 
-                  <form onSubmit={handleSaveSettings} className="p-8 rounded-3xl bg-slate-950/80 space-y-8 shadow-2xl shadow-black/80 backdrop-blur-md border border-slate-900/20">
+                  <form onSubmit={handleSaveSettings} className="p-4 sm:p-8 rounded-3xl bg-slate-950/80 space-y-6 sm:space-y-8 shadow-2xl shadow-black/80 backdrop-blur-md border border-slate-900/20">
                     
                     {/* SUBTAB 1: SITE IDENTITY & BRAND VISUALS */}
                     {settingsSubTab === 'identity' && (
@@ -2529,7 +2529,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-4 sm:p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner">
                           <div>
                             <label className="block text-xs text-slate-400 mb-1.5 font-medium">Branding Logo Text</label>
                             <input 
@@ -2564,7 +2564,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
 
                         <h5 className="text-xs font-bold text-slate-405 uppercase tracking-widest mt-6">Upload Assets</h5>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner space-y-4">
+                          <div className="p-4 sm:p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner space-y-4">
                             <div className="flex items-center justify-between">
                               <span className="block text-xs font-semibold text-slate-300">Header Light Logo</span>
                               
@@ -2585,7 +2585,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                             />
                           </div>
 
-                          <div className="p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner space-y-4">
+                          <div className="p-4 sm:p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner space-y-4">
                             <div className="flex items-center justify-between">
                               <span className="block text-xs font-semibold text-slate-300">Homepage Canvas Mockup</span>
                               <div className="group relative">
@@ -2620,7 +2620,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-4 sm:p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner">
                           <div>
                             <label className="block text-xs text-slate-400 mb-1.5 font-medium">Hero Top Title</label>
                             <input 
@@ -2677,7 +2677,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                           </div>
                         </div>
 
-                        <div className="space-y-5 p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner">
+                        <div className="space-y-5 p-4 sm:p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                             <div>
                               <span className="block text-xs font-bold text-blue-400 uppercase tracking-widest mb-1.5">Interactive Showcase Grid</span>
@@ -2779,7 +2779,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                           </div>
                         </div>
 
-                        <div className="p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner space-y-4">
+                        <div className="p-4 sm:p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner space-y-4">
                           <div>
                             <label className="block text-xs text-slate-400 mb-1.5 font-semibold">
                               Plugin Download Link (Google Drive / GitHub Releases / Custom ZIP URL)
@@ -2800,7 +2800,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                         </div>
 
                         <h5 className="text-xs font-bold text-slate-405 uppercase tracking-widest mt-6">Admin Identity Profile</h5>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-4 sm:p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 shadow-inner">
                           <div>
                             <label className="block text-xs text-slate-400 mb-1.5 font-medium">Administrator Name</label>
                             <input 
@@ -2836,7 +2836,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                             <p className="text-[11px] text-slate-400">Configure mail server credentials and auto-responder templates for the Contact form.</p>
                           </div>
                         </div>
-                        <div className="space-y-5 p-6 rounded-2xl bg-slate-900/50 border border-slate-900 shadow-xl shadow-black/10">
+                        <div className="space-y-5 p-4 sm:p-6 rounded-2xl bg-slate-900/50 border border-slate-900 shadow-xl shadow-black/10">
                           <div>
                             <label className="block text-xs text-slate-400 font-medium mb-1.5 uppercase tracking-wider">SMTP Email Address</label>
                             <input
@@ -2885,7 +2885,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                             <p className="text-[11px] text-slate-400">This email gets sent automatically to users who fill out the contact form.</p>
                           </div>
                         </div>
-                        <div className="space-y-5 p-6 rounded-2xl bg-slate-900/50 border border-slate-900 shadow-xl shadow-black/10">
+                        <div className="space-y-5 p-4 sm:p-6 rounded-2xl bg-slate-900/50 border border-slate-900 shadow-xl shadow-black/10">
                           <div>
                             <label className="block text-xs text-slate-400 font-medium mb-1.5 uppercase tracking-wider">Email Subject</label>
                             <input
@@ -3210,8 +3210,8 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                   </span>
                 </div>
 
-                <div className="border border-slate-850 rounded-2xl overflow-hidden bg-slate-950">
-                  <table className="w-full text-left text-xs border-collapse">
+                <div className="border border-slate-850 rounded-2xl overflow-hidden bg-slate-950 overflow-x-auto hide-scrollbar">
+                  <table className="w-full text-left text-xs border-collapse min-w-[600px]">
                     <thead>
                       <tr className="bg-slate-900 border-b border-slate-850 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
                         <th className="p-4">Attribute Field</th>

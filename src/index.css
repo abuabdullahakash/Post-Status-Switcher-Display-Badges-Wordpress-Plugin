@@ -23,3 +23,11 @@ body {
               linear-gradient(to right, #3b82f6, #10b981) border-box;
   border: 1px solid transparent;
 }
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
