@@ -116,27 +116,54 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await transporter.sendMail(adminMailOptions);
         emailSent = true;
 
-        let replySubject = smtpSettings.autoReplySubject || "Thank you for contacting us!";
+        const senderName = smtpSettings.smtpSenderName || smtpSettings.siteName || 'Poststatus Support';
+
+        let replySubject = smtpSettings.autoReplySubject || `Thank you for contacting ${senderName}!`;
         replySubject = replySubject.replace(/{ticketID}/g, contactId);
 
-        let defaultTemplate = "Hello {name},\n\nThank you for reaching out! Your message has been successfully received (Ticket ID: {ticketID}). Our support team will get back to you shortly.\n\nBest Regards,\nThe Support Team";
-        let templateContent = smtpSettings.autoReplyTemplate && smtpSettings.autoReplyTemplate.trim() !== '' 
-          ? smtpSettings.autoReplyTemplate 
-          : defaultTemplate;
+        let finalHtml = "";
+        let finalPlainText = "";
 
-        let replyBody = templateContent
-          .replace(/{name}/g, name)
-          .replace(/{email}/g, email)
-          .replace(/{ticketID}/g, contactId);
-        
-        const formattedReplyBodyHtml = replyBody.replace(/\n/g, '<br/>');
+        if (smtpSettings.autoReplyTemplate && smtpSettings.autoReplyTemplate.trim() !== '') {
+          let replyBody = smtpSettings.autoReplyTemplate
+            .replace(/{name}/g, name)
+            .replace(/{email}/g, email)
+            .replace(/{ticketID}/g, contactId);
+          finalPlainText = replyBody;
+          finalHtml = `<div style="font-family: inherit; font-size: 14px; max-width: 600px; color: #333;">${replyBody.replace(/\n/g, '<br/>')}</div>`;
+        } else {
+          finalPlainText = `Hello ${name},\n\nThank you for reaching out! We've received your message and have opened a support ticket for you (Ticket ID: ${contactId}).\n\nOur team is reviewing your request and will get back to you as soon as possible.\n\nBest Regards,\nThe ${senderName} Team`;
+          
+          finalHtml = `
+            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaea; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+              <div style="background-color: #0f172a; padding: 24px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600;">${senderName}</h1>
+              </div>
+              <div style="padding: 32px; background-color: #ffffff; color: #334155; line-height: 1.6;">
+                <h2 style="margin-top: 0; color: #0f172a; font-size: 18px;">Hello ${name},</h2>
+                <p>Thank you for reaching out! We've received your message and have opened a support ticket for you.</p>
+                <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0; border-radius: 0 4px 4px 0;">
+                  <p style="margin: 0; font-size: 14px; color: #475569;"><strong>Ticket ID:</strong> ${contactId}</p>
+                  <p style="margin: 8px 0 0 0; font-size: 14px; color: #475569;"><strong>Status:</strong> Received & Queued</p>
+                </div>
+                <p>Our team is reviewing your request and will get back to you as soon as possible.</p>
+                <br/>
+                <p style="margin: 0;">Best Regards,</p>
+                <p style="margin: 4px 0 0 0; font-weight: 600; color: #0f172a;">The ${senderName} Team</p>
+              </div>
+              <div style="background-color: #f1f5f9; padding: 16px; text-align: center; color: #64748b; font-size: 12px;">
+                <p style="margin: 0;">This is an automated message. Please do not reply directly to this email if possible.</p>
+              </div>
+            </div>
+          `;
+        }
 
         const customerMailOptions = {
-          from: `"${smtpSettings.siteName || 'Support'}" <${smtpUser}>`,
+          from: `"${senderName}" <${smtpUser}>`,
           to: email,
           subject: replySubject,
-          text: replyBody,
-          html: `<div style="font-family: inherit; font-size: 14px; max-width: 600px;">${formattedReplyBodyHtml}</div>`
+          text: finalPlainText,
+          html: finalHtml
         };
         
         await transporter.sendMail(customerMailOptions);

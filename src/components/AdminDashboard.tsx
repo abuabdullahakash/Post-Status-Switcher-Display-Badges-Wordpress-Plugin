@@ -2838,6 +2838,17 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                         </div>
                         <div className="space-y-5 p-4 sm:p-6 rounded-2xl bg-slate-900/50 border border-slate-900 shadow-xl shadow-black/10">
                           <div>
+                            <label className="block text-xs text-slate-400 font-medium mb-1.5 uppercase tracking-wider">Sender Display Name</label>
+                            <input
+                              type="text"
+                              value={settings.smtpSenderName || ""}
+                              onChange={(e) => updateSettings({ ...settings, smtpSenderName: e.target.value })}
+                              placeholder="e.g. Poststatus Support"
+                              className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40 font-medium transition-colors hover:border-slate-800/40"
+                            />
+                            <p className="text-xs text-slate-500 mt-1">The name that appears in the customer's inbox.</p>
+                          </div>
+                          <div>
                             <label className="block text-xs text-slate-400 font-medium mb-1.5 uppercase tracking-wider">SMTP Email Address</label>
                             <input
                               type="email"
