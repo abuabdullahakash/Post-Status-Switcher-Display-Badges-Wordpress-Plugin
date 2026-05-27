@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  auth 
+  auth,
+  db
 } from '../lib/firebase';
+import { 
+  collection, getDocs, deleteDoc, doc, updateDoc
+} from 'firebase/firestore';
 import { 
   signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword 
 } from 'firebase/auth';
@@ -10,6 +14,7 @@ import { useData } from '../context/DataContext';
 import { Feature, PricingPlan, FAQItem, SiteSettings } from '../types';
 import * as Icons from 'lucide-react';
 import ImageUploader from './ImageUploader';
+import jsPDF from 'jspdf';
 
 const {
   Lock, AlertCircle, Sparkles, LogOut, Check, Plus, Trash2, 
@@ -45,13 +50,18 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'features' | 'pricing' | 'faq' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'features' | 'pricing' | 'faq' | 'settings' | 'inquiries'>('dashboard');
   const [settingsSubTab, setSettingsSubTab] = useState<'identity' | 'hero' | 'marketing' | 'download' | 'smtp' | 'danger'>('identity');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
   // Custom states for search, list-grid view, unsaved-changes original feature snapshots
   const [featureSearchQuery, setFeatureSearchQuery] = useState('');
+  const [inquirySearchQuery, setInquirySearchQuery] = useState('');
+  const [inquiryFilterStatus, setInquiryFilterStatus] = useState<'all' | 'new' | 'read' | 'replied'>('all');
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [fetchingContacts, setFetchingContacts] = useState(false);
+  const [selectedInquiry, setSelectedInquiry] = useState<any | null>(null);
   const [featureViewMode, setFeatureViewMode] = useState<'grid' | 'list'>('grid');
   const [showUnsavedWarningPopup, setShowUnsavedWarningPopup] = useState(false);
   const [originalFeatureCopy, setOriginalFeatureCopy] = useState<Feature | null>(null);
@@ -191,6 +201,110 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     } catch (err) {
       console.error("Sign out error:", err);
     }
+  };
+
+  const fetchContacts = async () => {
+    setFetchingContacts(true);
+    try {
+      const contactsSnapshot = await getDocs(collection(db, "contacts"));
+      const contactsList = contactsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      setContacts(contactsList);
+    } catch (error) {
+      console.error("Error fetching contacts:", error);
+      setToast({ message: "Failed to load inquiries.", type: "error" });
+    } finally {
+      setFetchingContacts(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && activeTab === 'inquiries') {
+      fetchContacts();
+    }
+  }, [user, activeTab]);
+
+  const handleDeleteContact = async (id: string, isPermanent: boolean = false) => {
+    if (!confirm(`Are you sure you want to ${isPermanent ? 'permanently delete' : 'move to trash'} this inquiry?`)) return;
+    
+    try {
+      if (isPermanent) {
+        await deleteDoc(doc(db, "contacts", id));
+      } else {
+        await updateDoc(doc(db, "contacts", id), { status: 'deleted' });
+      }
+      
+      setContacts(contacts.filter(c => c.id !== id));
+      setToast({ message: `Inquiry successfully ${isPermanent ? 'deleted' : 'moved to trash'}.`, type: 'success' });
+      if (selectedInquiry?.id === id) {
+        setSelectedInquiry(null);
+      }
+    } catch (error) {
+      console.error("Error deleting contact:", error);
+      setToast({ message: "Error deleting inquiry.", type: "error" });
+    }
+  };
+
+  const generatePDF = (inquiry: any) => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFillColor(15, 23, 42); // slate-950
+    doc.rect(0, 0, 210, 40, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("INQUIRY DETAILS", 14, 25);
+    
+    // Ticket ID
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Ticket ID: ${inquiry.id}`, 110, 25);
+    
+    // Info styling
+    const startY = 55;
+    const lineHeight = 10;
+    
+    doc.setTextColor(51, 65, 85); // slate-700
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    
+    doc.text("Sender Name:", 14, startY);
+    doc.text("Email Address:", 14, startY + lineHeight);
+    doc.text("Date Submitted:", 14, startY + lineHeight * 2);
+    doc.text("Subject:", 14, startY + lineHeight * 3);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(15, 23, 42); // slate-950
+    
+    doc.text(inquiry.name || "N/A", 55, startY);
+    doc.text(inquiry.email || "N/A", 55, startY + lineHeight);
+    doc.text(new Date(inquiry.createdAt).toLocaleString(), 55, startY + lineHeight * 2);
+    doc.text(inquiry.subject || "N/A", 55, startY + lineHeight * 3);
+    
+    // Divider
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.line(14, startY + lineHeight * 4, 196, startY + lineHeight * 4);
+    
+    // Message
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(51, 65, 85); // slate-700
+    doc.text("Message Content:", 14, startY + lineHeight * 5.5);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(71, 85, 105); // slate-600
+    doc.setFontSize(11);
+    
+    // Split text to fit page width
+    const splitText = doc.splitTextToSize(inquiry.message || "No message provided.", 182);
+    doc.text(splitText, 14, startY + lineHeight * 6.5);
+    
+    // Save
+    doc.save(`inquiry_${inquiry.id}.pdf`);
   };
 
   const isDemoMode = false;
@@ -648,6 +762,13 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                 >
                   <HelpCircle className="w-4 h-4" />
                   FAQ Database
+                </button>
+                <button 
+                  onClick={() => { setActiveTab('inquiries'); setIsMobileMenuOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${activeTab === 'inquiries' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-400' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
+                >
+                  <Mail className="w-4 h-4" />
+                  Inquiries
                 </button>
                 <button 
                   onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }}
@@ -2428,6 +2549,146 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                 </div>
               )}
 
+              {/* INQUIRIES TAB */}
+              {activeTab === 'inquiries' && (
+                 <div className="space-y-6">
+                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                     <div>
+                       <h3 className="text-xl font-display font-bold text-white">Contact Form Inquiries</h3>
+                       <p className="text-sm text-slate-400">Manage and view messages submitted by visitors.</p>
+                     </div>
+                     <div className="flex flex-wrap md:flex-nowrap items-center gap-2">
+                        <select 
+                          value={inquiryFilterStatus}
+                          onChange={(e) => setInquiryFilterStatus(e.target.value as any)}
+                          className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 min-w-[120px]"
+                        >
+                          <option value="all">All Submissions</option>
+                          <option value="new">New</option>
+                          <option value="read">Read</option>
+                          <option value="replied">Replied</option>
+                          <option value="deleted">Trash</option>
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Search content..."
+                          value={inquirySearchQuery}
+                          onChange={(e) => setInquirySearchQuery(e.target.value)}
+                          className="w-full md:w-auto bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500"
+                        />
+                        <button 
+                          onClick={fetchContacts}
+                          className="p-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl cursor-pointer transition-colors"
+                          title="Refresh"
+                        >
+                          <RefreshCw className={`w-4 h-4 text-slate-400 ${fetchingContacts ? 'animate-spin text-blue-400' : ''}`} />
+                        </button>
+                     </div>
+                   </div>
+
+                   <div className="bg-slate-950 border border-slate-900 rounded-2xl overflow-hidden shadow-xl overflow-x-auto hide-scrollbar">
+                      {fetchingContacts && contacts.length === 0 ? (
+                        <div className="p-8 flex items-center justify-center text-slate-400">
+                          <RefreshCw className="w-5 h-5 animate-spin mr-3 text-blue-400" /> Loading inquiries...
+                        </div>
+                      ) : (
+                        <table className="w-full text-left text-sm border-collapse min-w-[800px]">
+                          <thead>
+                            <tr className="bg-slate-900/80 border-b border-slate-850 text-slate-400 font-semibold tracking-wider uppercase text-[10px]">
+                              <th className="p-4 pl-6">Date</th>
+                              <th className="p-4">Customer</th>
+                              <th className="p-4">Subject</th>
+                              <th className="p-4">Status</th>
+                              <th className="p-4 pr-6 text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {contacts
+                              .filter(c => {
+                                if (inquiryFilterStatus === 'all') return c.status !== 'deleted';
+                                return c.status === inquiryFilterStatus;
+                              })
+                              .filter(c => 
+                                (c.name || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
+                                (c.email || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
+                                (c.subject || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
+                                (c.message || '').toLowerCase().includes(inquirySearchQuery.toLowerCase())
+                              )
+                              .map((contact) => (
+                              <tr key={contact.id} className="border-b border-slate-850/50 hover:bg-slate-900/40 transition-colors">
+                                <td className="p-4 pl-6 text-slate-400 text-xs whitespace-nowrap">
+                                  {new Date(contact.createdAt).toLocaleDateString()}<br/>
+                                  <span className="text-[10px] text-slate-500">{new Date(contact.createdAt).toLocaleTimeString()}</span>
+                                </td>
+                                <td className="p-4">
+                                  <div className="font-semibold text-white">{contact.name}</div>
+                                  <div className="text-xs text-slate-400">{contact.email}</div>
+                                </td>
+                                <td className="p-4 text-slate-300">
+                                  <div className="font-medium">{contact.subject}</div>
+                                  <div className="text-xs text-slate-500 truncate max-w-[200px]">{contact.message}</div>
+                                </td>
+                                <td className="p-4">
+                                  <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider
+                                    ${contact.status === 'new' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 
+                                      contact.status === 'read' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 
+                                      contact.status === 'replied' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
+                                      'bg-slate-800 text-slate-400 border border-slate-700'}
+                                  `}>
+                                    {contact.status || 'new'}
+                                  </span>
+                                </td>
+                                <td className="p-4 pr-6 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button 
+                                      onClick={() => setSelectedInquiry(contact)}
+                                      className="p-1.5 bg-slate-900 hover:bg-slate-800 text-blue-400 rounded-lg border border-slate-800 transition-colors cursor-pointer"
+                                      title="View Details"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </button>
+                                    <button 
+                                      onClick={() => generatePDF(contact)}
+                                      className="p-1.5 bg-slate-900 hover:bg-slate-800 text-emerald-400 rounded-lg border border-slate-800 transition-colors cursor-pointer"
+                                      title="Download PDF"
+                                    >
+                                      <Icons.Download className="w-4 h-4" />
+                                    </button>
+                                    {contact.status === 'deleted' ? (
+                                      <button 
+                                        onClick={() => handleDeleteContact(contact.id, true)}
+                                        className="p-1.5 bg-rose-950/30 hover:bg-rose-900/50 text-rose-400 rounded-lg border border-rose-900/30 transition-colors cursor-pointer"
+                                        title="Delete Permanently"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    ) : (
+                                      <button 
+                                        onClick={() => handleDeleteContact(contact.id, false)}
+                                        className="p-1.5 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-lg border border-rose-900/20 transition-colors cursor-pointer"
+                                        title="Move to Trash"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                            {contacts.length > 0 && contacts.filter(c => inquiryFilterStatus === 'all' ? c.status !== 'deleted' : c.status === inquiryFilterStatus).length === 0 && (
+                              <tr>
+                                <td colSpan={5} className="p-8 text-center text-slate-500">
+                                  No inquiries found matching your filters.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      )}
+                   </div>
+                 </div>
+              )}
+
               {/* SETTINGS TAB */}
               {activeTab === 'settings' && (
                 <div className="space-y-6">
@@ -3471,6 +3732,136 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                   <Icons.Check className="w-4 h-4" />
                   Save & Close
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Inquiry Detail Modal */}
+      <AnimatePresence>
+        {selectedInquiry && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 min-h-screen z-[100] flex items-center justify-center p-4"
+          >
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedInquiry(null)}></div>
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-950 shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                    <Mail className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-white text-lg">Inquiry Detail</h3>
+                    <p className="text-xs text-slate-400">View complete submission details</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => generatePDF(selectedInquiry)}
+                    className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    title="Download as PDF"
+                  >
+                    <Icons.Download className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => setSelectedInquiry(null)}
+                    className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 overflow-y-auto space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-slate-950/60 rounded-xl border border-slate-850">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1 block">Customer Details</span>
+                    <div className="font-semibold text-white">{selectedInquiry.name}</div>
+                    <a href={`mailto:${selectedInquiry.email}`} className="text-blue-400 hover:text-blue-300 text-sm transition-colors">{selectedInquiry.email}</a>
+                  </div>
+                  
+                  <div className="p-4 bg-slate-950/60 rounded-xl border border-slate-850">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1 block">Metadata</span>
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-slate-300">
+                        {new Date(selectedInquiry.createdAt).toLocaleString()}
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider
+                        ${selectedInquiry.status === 'new' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 
+                          selectedInquiry.status === 'read' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 
+                          selectedInquiry.status === 'replied' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
+                          'bg-slate-800 text-slate-400 border border-slate-700'}
+                      `}>
+                        {selectedInquiry.status || 'new'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-5 bg-slate-950/80 rounded-2xl border border-slate-850 space-y-3">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1 block">Subject</span>
+                    <h4 className="font-semibold text-white text-base">{selectedInquiry.subject}</h4>
+                  </div>
+                  
+                  <div className="h-px w-full bg-slate-800 my-4"></div>
+                  
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-2 block">Message Body</span>
+                    <p className="text-slate-300 text-sm whitespace-pre-wrap leading-relaxed">
+                      {selectedInquiry.message}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-5 border-t border-slate-800 bg-slate-950 flex flex-wrap items-center justify-between gap-3 shrink-0">
+                <div className="flex gap-2">
+                   <select 
+                      value={selectedInquiry.status || 'new'}
+                      onChange={async (e) => {
+                        const newStatus = e.target.value;
+                        const contactId = selectedInquiry.id;
+                        try {
+                          await updateDoc(doc(db, "contacts", contactId), { status: newStatus });
+                          setContacts(contacts.map(c => c.id === contactId ? { ...c, status: newStatus } : c));
+                          setSelectedInquiry({ ...selectedInquiry, status: newStatus });
+                          setToast({ message: "Status updated", type: "success" });
+                        } catch (err) {
+                           setToast({ message: "Error updating status", type: "error" });
+                        }
+                      }}
+                      className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500 cursor-pointer"
+                    >
+                      <option value="new">Mark as New</option>
+                      <option value="read">Mark as Read</option>
+                      <option value="replied">Mark as Replied</option>
+                    </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a 
+                    href={`mailto:${selectedInquiry.email}?subject=RE: ${selectedInquiry.subject}`}
+                    className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-lg shadow-blue-500/20"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Reply via Email
+                  </a>
+                  <button
+                    onClick={() => handleDeleteContact(selectedInquiry.id, selectedInquiry.status === 'deleted')}
+                    className="px-4 py-2.5 rounded-xl bg-rose-950 hover:bg-rose-900 text-rose-400 font-bold text-xs transition-colors cursor-pointer border border-rose-900 hover:border-rose-800"
+                  >
+                    {selectedInquiry.status === 'deleted' ? 'Delete Permanently' : 'Move to Trash'}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
