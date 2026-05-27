@@ -56,6 +56,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [showUnsavedWarningPopup, setShowUnsavedWarningPopup] = useState(false);
   const [originalFeatureCopy, setOriginalFeatureCopy] = useState<Feature | null>(null);
   const [warningPostAction, setWarningPostAction] = useState<() => void>(() => {});
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Pending creations/updates moderation states
   const [showPendingCreatesModal, setShowPendingCreatesModal] = useState(false);
@@ -589,51 +590,67 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
         )}
       </AnimatePresence>
 
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-30 md:hidden backdrop-blur-sm"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar Nav */}
-      <div className="w-full md:w-64 bg-slate-900 border-r border-slate-800/60 p-6 flex flex-col justify-between md:h-screen shrink-0 overflow-y-auto">
+      <div className={`fixed inset-y-0 left-0 z-40 w-64 md:w-64 bg-slate-900 border-r border-slate-800/60 p-6 flex flex-col justify-between h-screen shrink-0 overflow-y-auto transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div>
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                <Settings2 className="w-6 h-6 text-emerald-400" />
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                  <Settings2 className="w-6 h-6 text-emerald-400" />
+                </div>
+                <div>
+                  <h2 className="font-display font-bold text-lg text-white">PostStatus Info</h2>
+                  <p className="text-slate-500 text-xs">Dynamic Control Center</p>
+                </div>
               </div>
-              <div>
-                <h2 className="font-display font-bold text-lg text-white">PostStatus Info</h2>
-                <p className="text-slate-500 text-xs">Dynamic Control Center</p>
-              </div>
+              <button 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="md:hidden text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             {isSuperAdmin && (
               <nav className="space-y-1">
                 <button 
-                  onClick={() => setActiveTab('dashboard')}
+                  onClick={() => { setActiveTab('dashboard'); setIsMobileMenuOpen(false); }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${activeTab === 'dashboard' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-400' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
                 >
                   <Icons.LayoutDashboard className="w-4 h-4" />
                   Dashboard Overview
                 </button>
                 <button 
-                  onClick={() => setActiveTab('features')}
+                  onClick={() => { setActiveTab('features'); setIsMobileMenuOpen(false); }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${activeTab === 'features' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-400' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
                 >
                   <Sparkles className="w-4 h-4" />
                   Feature Cards Grid
                 </button>
                 <button 
-                  onClick={() => setActiveTab('pricing')}
+                  onClick={() => { setActiveTab('pricing'); setIsMobileMenuOpen(false); }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${activeTab === 'pricing' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-400' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
                 >
                   <Ticket className="w-4 h-4" />
                   Pricing & Plans
                 </button>
                 <button 
-                  onClick={() => setActiveTab('faq')}
+                  onClick={() => { setActiveTab('faq'); setIsMobileMenuOpen(false); }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${activeTab === 'faq' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-400' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
                 >
                   <HelpCircle className="w-4 h-4" />
                   FAQ Database
                 </button>
                 <button 
-                  onClick={() => setActiveTab('settings')}
+                  onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${activeTab === 'settings' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-400' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
                 >
                   <Icons.Settings className="w-4 h-4" />
@@ -695,28 +712,38 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 flex flex-col min-w-0 bg-slate-950 md:h-screen overflow-y-auto">
+        <div className="flex-1 flex flex-col min-w-0 bg-slate-950 md:h-screen h-screen overflow-y-auto w-full relative">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-900 p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm sticky top-0 z-10">
-            <div className="min-w-0">
-              <h1 className="text-lg sm:text-2xl font-display font-bold text-white flex flex-wrap items-center gap-2">
-                PostStatus Customizer
-                <span className="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-sans tracking-wide shrink-0">
-                  Active Realtime Sync
-                </span>
-              </h1>
-              <p className="text-slate-400 text-[11px] sm:text-xs mt-1 leading-normal max-w-xl">Changes are directly written to Firestore databases and immediately broadcasted to live users.</p>
+          <div className="flex sm:items-center justify-between gap-4 border-b border-slate-900 p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm sticky top-0 z-10 w-full sm:flex-row shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
+            <div className="min-w-0 flex items-start sm:items-center gap-4">
+              <button 
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="md:hidden mt-0.5 sm:mt-0 p-2 -ml-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <Icons.Menu className="w-5 h-5" />
+              </button>
+              <div>
+                <h1 className="text-lg sm:text-2xl font-display font-bold text-white flex flex-wrap items-center gap-2">
+                  PostStatus Customizer
+                  <span className="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-sans tracking-wide shrink-0">
+                    Active Realtime Sync
+                  </span>
+                </h1>
+                <p className="text-slate-400 text-[11px] sm:text-xs mt-1 leading-normal max-w-xl hidden sm:block">Changes are directly written to Firestore databases and immediately broadcasted to live users.</p>
+              </div>
             </div>
             <button 
               onClick={onClose}
-              className="w-full sm:w-auto justify-center px-4 py-2.5 text-xs bg-slate-900 hover:bg-slate-850 hover:text-white text-slate-300 rounded-xl border border-slate-800 hover:border-slate-700 transition-all flex items-center gap-2 font-medium shadow-sm cursor-pointer shrink-0"
+              className="w-auto justify-center px-4 py-2.5 text-xs bg-slate-900 hover:bg-slate-850 hover:text-white text-slate-300 rounded-xl border border-slate-800 hover:border-slate-700 transition-all flex items-center gap-2 font-medium shadow-sm cursor-pointer shrink-0"
             >
-              <Icons.Home className="w-3.5 h-3.5 text-blue-400" />
-              <span>Back to Website</span>
+              <Icons.Home className="w-3.5 h-3.5 text-blue-400 hidden sm:block" />
+              <Icons.X className="w-4 h-4 sm:hidden text-slate-400" />
+              <span className="hidden sm:inline">Back to Website</span>
+              <span className="sm:hidden">Close</span>
             </button>
           </div>
 
-            <div className="p-8 space-y-8 flex-1">
+            <div className="p-4 sm:p-8 space-y-8 flex-1">
               
               {/* DASHBOARD TAB */}
               {activeTab === 'dashboard' && (
