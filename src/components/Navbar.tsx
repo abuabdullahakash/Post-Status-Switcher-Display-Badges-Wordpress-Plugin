@@ -141,10 +141,12 @@ export default function Navbar() {
                     onClick={(e) => {
                       e.preventDefault();
                       setMobileMenuOpen(false);
-                      const el = document.querySelector(link.href);
-                      if (el) {
-                        el.scrollIntoView({ behavior: 'smooth' });
-                      }
+                      setTimeout(() => {
+                        const el = document.querySelector(link.href);
+                        if (el) {
+                          el.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      }, 200);
                     }}
                     className="block px-4 py-3 rounded-xl text-sm font-semibold uppercase tracking-wider text-slate-400 hover:text-white hover:bg-slate-900/80 transition-all border border-transparent hover:border-slate-850/40"
                   >
@@ -156,12 +158,14 @@ export default function Navbar() {
                 <a 
                   href="#contact"
                   onClick={(e) => {
-                    setMobileMenuOpen(false);
                     e.preventDefault();
-                    const contactSec = document.getElementById('contact');
-                    if (contactSec) {
-                      contactSec.scrollIntoView({ behavior: 'smooth' });
-                    }
+                    setMobileMenuOpen(false);
+                    setTimeout(() => {
+                      const contactSec = document.getElementById('contact');
+                      if (contactSec) {
+                        contactSec.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }, 200);
                   }}
                   className="w-full text-center py-3 px-4 rounded-full bg-white hover:bg-slate-100 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 uppercase cursor-pointer transition-all shadow-[0_4px_15px_rgba(255,255,255,0.1)]"
                 >

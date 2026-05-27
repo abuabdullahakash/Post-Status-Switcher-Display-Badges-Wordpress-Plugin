@@ -81,4 +81,11 @@ export interface SiteSettings {
   pricingSectionTitle?: string;
   pricingSectionSubtitle?: string;
   footerCopyrightText?: string;
+
+  // SMTP & Mail Settings
+  smtpEmail?: string;
+  smtpAppPassword?: string;
+  adminNotificationEmail?: string;
+  autoReplySubject?: string;
+  autoReplyTemplate?: string;
 }

@@ -126,8 +126,8 @@ export default function Documentation() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-bold text-slate-500">STEP {index + 1}</span>
-                      <h3 className={`font-semibold ${isActive ? 'text-white' : 'text-slate-300'}`}>{step.title}</h3>
+                      <span className="text-xs font-bold text-slate-500 whitespace-nowrap shrink-0">STEP {index + 1}</span>
+                      <h3 className={`font-semibold line-clamp-1 sm:line-clamp-none ${isActive ? 'text-white' : 'text-slate-300'}`}>{step.title}</h3>
                     </div>
                     <p className="text-sm text-slate-400 line-clamp-2">
                       {step.description}
@@ -155,8 +155,8 @@ export default function Documentation() {
                       transition={{ duration: 0.3 }}
                       className="relative z-10 h-full flex flex-col"
                     >
-                       <div className="flex items-center gap-3 mb-6">
-                         <div className="px-3 py-1 bg-slate-800 rounded-full text-xs font-bold tracking-wider text-slate-400">
+                       <div className="flex items-start sm:items-center gap-3 mb-6">
+                         <div className="px-3 py-1 bg-slate-800 rounded-full text-xs font-bold tracking-wider text-slate-400 shrink-0 whitespace-nowrap mt-1 sm:mt-0">
                            STEP 0{index + 1}
                          </div>
                          <h3 className="text-2xl font-display font-bold">{step.title}</h3>

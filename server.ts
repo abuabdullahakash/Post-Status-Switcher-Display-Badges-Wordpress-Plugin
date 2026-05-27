@@ -1,41 +1,43 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { createServer as createViteServer } from "vite";
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 import nodemailer from "nodemailer";
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+const app = express();
 
-  // Read Firebase configuration
+// Read Firebase configuration safely
+let firebaseApp, db;
+try {
   const configPath = path.join(process.cwd(), "firebase-applet-config.json");
-  const localConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+  if (fs.existsSync(configPath)) {
+    const localConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    const firebaseConfig = {
+      apiKey: process.env.VITE_FIREBASE_API_KEY || localConfig.apiKey,
+      authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || localConfig.authDomain,
+      projectId: process.env.VITE_FIREBASE_PROJECT_ID || localConfig.projectId,
+      storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET || localConfig.storageBucket,
+      messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || localConfig.messagingSenderId,
+      appId: process.env.VITE_FIREBASE_APP_ID || localConfig.appId,
+    };
+    firebaseApp = initializeApp(firebaseConfig);
+    db = getFirestore(firebaseApp, localConfig.firestoreDatabaseId);
+  }
+} catch (e) {
+  console.warn("Firebase configuration could not be loaded gracefully on init.", e);
+}
 
-  const firebaseConfig = {
-    apiKey: process.env.VITE_FIREBASE_API_KEY || localConfig.apiKey,
-    authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || localConfig.authDomain,
-    projectId: process.env.VITE_FIREBASE_PROJECT_ID || localConfig.projectId,
-    storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET || localConfig.storageBucket,
-    messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || localConfig.messagingSenderId,
-    appId: process.env.VITE_FIREBASE_APP_ID || localConfig.appId,
-  };
+// In-memory rate limiting map for contact submissions to protect against spam bots
+const ipRateLimits = new Map<string, number[]>();
 
-  const firebaseApp = initializeApp(firebaseConfig);
-  const db = getFirestore(firebaseApp, localConfig.firestoreDatabaseId);
+// Enable JSON body requests
+app.use(express.json());
 
-  // In-memory rate limiting map for contact submissions to protect against spam bots
-  const ipRateLimits = new Map<string, number[]>();
-
-  // Enable JSON body requests
-  app.use(express.json());
-
-  // API Route - Health Check
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", app: "PostStatus Features Backend" });
-  });
+// API Route - Health Check
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", app: "PostStatus Features Backend", vercel: process.env.VERCEL === "1" });
+});
 
   // API Route - Auto Publish Features (POST method, secured by Token)
   const API_KEY = process.env.AUTO_PUBLISH_API_KEY || "ps_agent_key_9cf4a29a";
@@ -348,32 +350,46 @@ async function startServer() {
       const docRef = doc(db, "contacts", contactId);
       await setDoc(docRef, contactDoc);
 
-      // 2. Dispatch real-time SMTP notification using nodemailer (if keys are configured)
-      const smtpHost = process.env.SMTP_HOST;
-      const smtpPort = process.env.SMTP_PORT;
-      const smtpUser = process.env.SMTP_USER;
-      const smtpPass = process.env.SMTP_PASS;
+      // 2. Fetch Settings from Firestore for SMTP details and Auto-Responder
+      let smtpSettings: any = {};
+      try {
+        const settingsDocRef = doc(db, 'settings', 'global');
+        const settingsSnap = await getDoc(settingsDocRef);
+        if (settingsSnap.exists()) {
+          smtpSettings = settingsSnap.data();
+        }
+      } catch (e) {
+        console.warn("Failed to fetch SMTP settings:", e);
+      }
+
+      // 3. Dispatch real-time SMTP notification using nodemailer
+      // For Gmail using App Password, host is typically smtp.gmail.com
+      const smtpHost = "smtp.gmail.com";
+      const smtpPort = 465;
+      const smtpUser = smtpSettings.smtpEmail || process.env.SMTP_USER;
+      const smtpPass = smtpSettings.smtpAppPassword || process.env.SMTP_PASS;
 
       let emailSent = false;
       let emailError = null;
 
-      const recipientEmail = "abuabdullahakash@gmail.com";
+      const adminEmailConfigured = smtpSettings.adminNotificationEmail || smtpSettings.adminEmail || "abuabdullahakash@gmail.com";
 
-      if (smtpHost && smtpPort && smtpUser && smtpPass) {
+      if (smtpUser && smtpPass) {
         try {
           const transporter = nodemailer.createTransport({
             host: smtpHost,
             port: Number(smtpPort),
-            secure: Number(smtpPort) === 465, // True for 465, false for 587 or other ports
+            secure: true,
             auth: {
               user: smtpUser,
               pass: smtpPass
             }
           });
 
-          const mailOptions = {
+          // A. Send Notification to Admin
+          const adminMailOptions = {
             from: `"${name} via Support Form" <${smtpUser}>`,
-            to: recipientEmail,
+            to: adminEmailConfigured,
             replyTo: email,
             subject: `[Support Ticket] ${subject || "New Inquiry"} - ${name}`,
             text: `New support dispatch received from contact form:\n\n` +
@@ -417,9 +433,38 @@ async function startServer() {
             `
           };
 
-          await transporter.sendMail(mailOptions);
+          await transporter.sendMail(adminMailOptions);
           emailSent = true;
-          console.log(`[SMTP SUCCESS] Mail delivered to "${recipientEmail}" from "${email}"`);
+          console.log(`[SMTP SUCCESS] Admin mail delivered to "${adminEmailConfigured}" from "${email}"`);
+
+          // B. Send Auto-Reply to Customer
+          if (smtpSettings.autoReplyTemplate) {
+            let replySubject = smtpSettings.autoReplySubject || "Thank you for contacting us!";
+            replySubject = replySubject.replace("{ticketID}", contactId);
+
+            let replyBody = smtpSettings.autoReplyTemplate
+              .replace(/{name}/g, name)
+              .replace(/{email}/g, email);
+            
+            // Format HTML safely, convert line breaks so it formats properly in email
+            const formattedReplyBodyHtml = replyBody.replace(/\n/g, '<br/>');
+
+            const customerMailOptions = {
+              from: `"${smtpSettings.siteName || 'Support'}" <${smtpUser}>`,
+              to: email,
+              subject: replySubject,
+              text: replyBody, // fallback
+              html: `
+                <div style="font-family: inherit; font-size: 14px; color: #1e293b; max-width: 600px;">
+                  ${formattedReplyBodyHtml}
+                </div>
+              `
+            };
+            
+            await transporter.sendMail(customerMailOptions);
+             console.log(`[SMTP SUCCESS] Auto-reply delivered to customer "${email}"`);
+          }
+
         } catch (mailErr: any) {
           console.error("[SMTP ERROR] Mail Dispatch Failed:", mailErr);
           emailError = mailErr.message;
@@ -427,11 +472,11 @@ async function startServer() {
       } else {
         // Fallback: SMTP not configured, simulate success and print blueprint log
         console.warn(`[SMTP NOTIFICATION MOCK] Send contact notification mockup:`);
-        console.warn(`\tTo: ${recipientEmail}`);
+        console.warn(`\tTo: ${adminEmailConfigured}`);
         console.warn(`\tFrom: ${email}`);
         console.warn(`\tSubject: ${subject}`);
         console.warn(`\tBody: ${message}`);
-        console.warn(`[REASON] No active SMTP variables (SMTP_HOST, SMTP_USER, etc.) configured in standard server environments.`);
+        console.warn(`[REASON] No active SMTP valid credentials configured in Database Settings (or .env).`);
       }
 
       return res.status(201).json({
@@ -442,34 +487,44 @@ async function startServer() {
         ...(emailError && { smtpError: emailError })
       });
 
-    } catch (dbErr: any) {
-      console.error("Database Contact Entry Failure:", dbErr);
-      return res.status(500).json({
-        error: "Internal Server Error",
-        message: "Could not record contact dispatch transaction in Firestore database.",
-        details: dbErr.message
+  } catch (dbErr: any) {
+    console.error("Database Contact Entry Failure:", dbErr);
+    return res.status(500).json({
+      error: "Internal Server Error",
+      message: "Could not record contact dispatch transaction in Firestore database.",
+      details: dbErr.message
+    });
+  }
+});
+
+// Standalone Server Initialization (Used locally and in standard Docker/Node environments)
+// In Vercel serverless environments, VERCEL=1 is set automatically, and it uses the exported app handler instead.
+if (process.env.VERCEL !== "1") {
+  async function startLocalServer() {
+    const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+    // Vite preview / frontend serving configuration
+    if (process.env.NODE_ENV !== "production") {
+      const { createServer: createViteServer } = await import("vite");
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } else {
+      const distPath = path.join(process.cwd(), "dist");
+      app.use(express.static(distPath));
+      app.get("*", (req, res) => {
+        res.sendFile(path.join(distPath, "index.html"));
       });
     }
-  });
 
-  // Vite preview / frontend serving configuration
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`[POST STATUS EXPRESS SERVER] Running on host 0.0.0.0:${PORT}`);
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`[POST STATUS EXPRESS SERVER] Running on host 0.0.0.0:${PORT}`);
-  });
+  startLocalServer();
 }
 
-startServer();
+// Export the Express Application specifically for Vercel Serverless Function support
+export default app;

@@ -15,7 +15,7 @@ const {
   Lock, AlertCircle, Sparkles, LogOut, Check, Plus, Trash2, 
   Edit3, Eye, Settings2, HelpCircle, Columns, ShoppingCart, 
   Timer, Zap, Home, Star, Users, LockOpen, Globe, CheckCircle, 
-  ShieldCheck, Calendar, Ticket, GraduationCap, Award, RefreshCw, X
+  ShieldCheck, Calendar, Ticket, GraduationCap, Award, RefreshCw, X, Mail
 } = Icons;
 
 interface AdminDashboardProps {
@@ -46,7 +46,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'features' | 'pricing' | 'faq' | 'settings'>('dashboard');
-  const [settingsSubTab, setSettingsSubTab] = useState<'identity' | 'hero' | 'marketing' | 'download' | 'danger'>('identity');
+  const [settingsSubTab, setSettingsSubTab] = useState<'identity' | 'hero' | 'marketing' | 'download' | 'smtp' | 'danger'>('identity');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -2463,6 +2463,18 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                     </button>
                     <button
                       type="button"
+                      onClick={() => setSettingsSubTab('smtp')}
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                        settingsSubTab === 'smtp' 
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10' 
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+                      }`}
+                    >
+                      <Icons.Mail className="w-3.5 h-3.5" />
+                      SMTP & Mail
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setSettingsSubTab('danger')}
                       className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
                         settingsSubTab === 'danger' 
@@ -2780,6 +2792,93 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                               label=""
                               compact={true}
                             />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SUBTAB 4.5: SMTP & Mail */}
+                    {settingsSubTab === 'smtp' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                            <Icons.Mail className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-white uppercase tracking-wide">SMTP & Contact Form Emails</h4>
+                            <p className="text-[11px] text-slate-400">Configure mail server credentials and auto-responder templates for the Contact form.</p>
+                          </div>
+                        </div>
+                        <div className="space-y-5 p-6 rounded-2xl bg-slate-900/50 border border-slate-900 shadow-xl shadow-black/10">
+                          <div>
+                            <label className="block text-xs text-slate-400 font-medium mb-1.5 uppercase tracking-wider">SMTP Email Address</label>
+                            <input
+                              type="email"
+                              value={settings.smtpEmail || ""}
+                              onChange={(e) => updateSettings({ ...settings, smtpEmail: e.target.value })}
+                              placeholder="e.g. notifications@yourdomain.com"
+                              className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40 font-medium transition-colors hover:border-slate-800/40"
+                            />
+                            <p className="text-xs text-slate-500 mt-1">This email acts as your sender address.</p>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-400 font-medium mb-1.5 uppercase tracking-wider">App Password</label>
+                            <input
+                              type="password"
+                              value={settings.smtpAppPassword || ""}
+                              onChange={(e) => updateSettings({ ...settings, smtpAppPassword: e.target.value })}
+                              placeholder="Enter App Password (not your main email password)"
+                              className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40 font-medium transition-colors hover:border-slate-800/40"
+                            />
+                            <p className="text-xs text-slate-500 mt-1">
+                              For Gmail, use a 16-character App Password. You won't need an API key. 
+                              <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 ml-1 underline decoration-blue-500/30 transition-colors">
+                                Create one here
+                              </a>
+                            </p>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-400 font-medium mb-1.5 uppercase tracking-wider">Admin Notification Email</label>
+                            <input
+                              type="email"
+                              value={settings.adminNotificationEmail || ""}
+                              onChange={(e) => updateSettings({ ...settings, adminNotificationEmail: e.target.value })}
+                              placeholder="Where should form submissions be sent? (e.g. your personal email)"
+                              className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40 font-medium transition-colors hover:border-slate-800/40"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 mt-8">
+                          <div className="p-2 rounded-lg bg-green-500/10 text-green-400">
+                            <Icons.Sparkles className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-white uppercase tracking-wide">Customer Auto-Responder Settings</h4>
+                            <p className="text-[11px] text-slate-400">This email gets sent automatically to users who fill out the contact form.</p>
+                          </div>
+                        </div>
+                        <div className="space-y-5 p-6 rounded-2xl bg-slate-900/50 border border-slate-900 shadow-xl shadow-black/10">
+                          <div>
+                            <label className="block text-xs text-slate-400 font-medium mb-1.5 uppercase tracking-wider">Email Subject</label>
+                            <input
+                              type="text"
+                              value={settings.autoReplySubject || ""}
+                              onChange={(e) => updateSettings({ ...settings, autoReplySubject: e.target.value })}
+                              placeholder="e.g. We've received your request! (Ticket #{ticketID})"
+                              className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40 font-medium transition-colors hover:border-slate-800/40"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-400 font-medium mb-1.5 uppercase tracking-wider">Automated Email Template (HTML support)</label>
+                            <textarea
+                              rows={8}
+                              value={settings.autoReplyTemplate || ""}
+                              onChange={(e) => updateSettings({ ...settings, autoReplyTemplate: e.target.value })}
+                              placeholder="Hello {name},&#10;&#10;Thanks for reaching out! We will get back to you shortly...&#10;&#10;You can include links, URLs, screenshots via HTML here."
+                              className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/40 font-normal transition-colors hover:border-slate-800/40 resize-y"
+                            />
+                            <p className="text-xs text-slate-500 mt-1">Available placeholders: <code>{name}</code>, <code>{email}</code>.</p>
                           </div>
                         </div>
                       </div>
