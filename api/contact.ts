@@ -65,7 +65,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       subject: subject || "No Subject",
       message,
       status: "new",
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      serverDispatchSecret: "PostStatusServerBypassToken2026"
     };
 
     const docRef = doc(db, "contacts", contactId);
@@ -115,26 +116,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await transporter.sendMail(adminMailOptions);
         emailSent = true;
 
-        if (smtpSettings.autoReplyTemplate) {
-          let replySubject = smtpSettings.autoReplySubject || "Thank you for contacting us!";
-          replySubject = replySubject.replace("{ticketID}", contactId);
+        let replySubject = smtpSettings.autoReplySubject || "Thank you for contacting us!";
+        replySubject = replySubject.replace(/{ticketID}/g, contactId);
 
-          let replyBody = smtpSettings.autoReplyTemplate
-            .replace(/{name}/g, name)
-            .replace(/{email}/g, email);
-          
-          const formattedReplyBodyHtml = replyBody.replace(/\n/g, '<br/>');
+        let defaultTemplate = "Hello {name},\n\nThank you for reaching out! Your message has been successfully received (Ticket ID: {ticketID}). Our support team will get back to you shortly.\n\nBest Regards,\nThe Support Team";
+        let templateContent = smtpSettings.autoReplyTemplate && smtpSettings.autoReplyTemplate.trim() !== '' 
+          ? smtpSettings.autoReplyTemplate 
+          : defaultTemplate;
 
-          const customerMailOptions = {
-            from: `"${smtpSettings.siteName || 'Support'}" <${smtpUser}>`,
-            to: email,
-            subject: replySubject,
-            text: replyBody,
-            html: `<div style="font-family: inherit; font-size: 14px; max-width: 600px;">${formattedReplyBodyHtml}</div>`
-          };
-          
-          await transporter.sendMail(customerMailOptions);
-        }
+        let replyBody = templateContent
+          .replace(/{name}/g, name)
+          .replace(/{email}/g, email)
+          .replace(/{ticketID}/g, contactId);
+        
+        const formattedReplyBodyHtml = replyBody.replace(/\n/g, '<br/>');
+
+        const customerMailOptions = {
+          from: `"${smtpSettings.siteName || 'Support'}" <${smtpUser}>`,
+          to: email,
+          subject: replySubject,
+          text: replyBody,
+          html: `<div style="font-family: inherit; font-size: 14px; max-width: 600px;">${formattedReplyBodyHtml}</div>`
+        };
+        
+        await transporter.sendMail(customerMailOptions);
 
       } catch (mailErr: any) {
         console.error("SMTP Error on Vercel:", mailErr);
