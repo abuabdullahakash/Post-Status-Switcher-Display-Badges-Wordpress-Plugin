@@ -5,7 +5,7 @@ import {
   db
 } from '../lib/firebase';
 import { 
-  collection, getDocs, deleteDoc, doc, updateDoc, writeBatch
+  collection, getDocs, deleteDoc, doc, updateDoc, writeBatch, addDoc, query, orderBy, limit
 } from 'firebase/firestore';
 import { 
   signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword 
@@ -43,6 +43,23 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const pendingCreates = features.filter(f => f.pendingApproval === 'create');
   const pendingUpdates = features.filter(f => f.pendingApproval === 'update');
 
+  const filteredInquiries = contacts.filter(c => {
+    if (inquiryFilterStatus === 'all') return c.status !== 'deleted';
+    return c.status === inquiryFilterStatus;
+  }).filter(c => 
+    (c.id || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
+    (c.name || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
+    (c.email || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
+    (c.subject || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
+    (c.message || '').toLowerCase().includes(inquirySearchQuery.toLowerCase())
+  );
+
+  const totalInquiriesPages = Math.ceil(filteredInquiries.length / INQUIRIES_PER_PAGE);
+  const paginatedInquiries = filteredInquiries.slice(
+    (inquiriesCurrentPage - 1) * INQUIRIES_PER_PAGE,
+    inquiriesCurrentPage * INQUIRIES_PER_PAGE
+  );
+
   const [user, setUser] = useState<User | null>(null);
   const [localAdmin, setLocalAdmin] = useState<{ email: string; displayName: string } | null>(null);
   const [email, setEmail] = useState('');
@@ -59,8 +76,12 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [featureSearchQuery, setFeatureSearchQuery] = useState('');
   const [inquirySearchQuery, setInquirySearchQuery] = useState('');
   const [inquiryFilterStatus, setInquiryFilterStatus] = useState<'all' | 'new' | 'read' | 'replied'>('all');
+  const [inquiriesCurrentPage, setInquiriesCurrentPage] = useState(1);
+  const INQUIRIES_PER_PAGE = 10;
   const [contacts, setContacts] = useState<any[]>([]);
   const [fetchingContacts, setFetchingContacts] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [fetchingLogs, setFetchingLogs] = useState(false);
   const [selectedInquiries, setSelectedInquiries] = useState<string[]>([]);
   const [selectedInquiry, setSelectedInquiry] = useState<any | null>(null);
   const [featureViewMode, setFeatureViewMode] = useState<'grid' | 'list'>('grid');
@@ -149,6 +170,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
         const userCredential = await signInWithEmailAndPassword(auth, targetEmail, password);
         const signedInUser = userCredential.user;
         if (signedInUser.email === targetEmail) {
+          await logAdminAction('login', 'System', 'Admin session established securely via Firebase Auth.');
           setIsLoggingIn(false);
           return;
         } else {
@@ -170,6 +192,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
               console.log("Superadmin user not registered in Firebase Auth, attempting auto-creation...");
               await createUserWithEmailAndPassword(auth, targetEmail, password);
               console.log("Superadmin auto-creation and login successful!");
+              await logAdminAction('login', 'System', 'Admin auto-created and session established securely.');
               setIsLoggingIn(false);
               return;
             } catch (signUpErr: any) {
@@ -182,6 +205,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
             email: targetEmail,
             displayName: "Md. Akash"
           });
+          await logAdminAction('login', 'System', 'Admin session established securely via fallback bypass code.');
           setIsLoggingIn(false);
           return;
         } else {
@@ -197,10 +221,43 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
 
   const handleSignOut = async () => {
     try {
+      await logAdminAction('logout', 'System', 'Admin session terminated.');
       await signOut(auth);
       setLocalAdmin(null);
     } catch (err) {
       console.error("Sign out error:", err);
+    }
+  };
+
+  const fetchAuditLogs = async () => {
+    setFetchingLogs(true);
+    try {
+      const logsQuery = query(collection(db, "auditLogs"), orderBy("timestamp", "desc"), limit(50));
+      const logsSnapshot = await getDocs(logsQuery);
+      const logsList = logsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setAuditLogs(logsList);
+    } catch (err) {
+      console.error("Error fetching audit logs:", err);
+    } finally {
+      setFetchingLogs(false);
+    }
+  };
+
+  const logAdminAction = async (actionType: string, actionCategory: string, details: string) => {
+    try {
+      const currentUser = user?.email || localAdmin?.email || "System Admin";
+      await addDoc(collection(db, "auditLogs"), {
+        actionType,
+        actionCategory,
+        details,
+        actor: currentUser,
+        timestamp: new Date().toISOString()
+      });
+      if (activeTab === 'dashboard') {
+        fetchAuditLogs();
+      }
+    } catch (e) {
+      console.error("Failed to log action", e);
     }
   };
 
@@ -231,8 +288,12 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   };
 
   useEffect(() => {
-    if ((user || localAdmin) && activeTab === 'inquiries') {
-      fetchContacts();
+    if (user || localAdmin) {
+      if (activeTab === 'inquiries') {
+        fetchContacts();
+      } else if (activeTab === 'dashboard') {
+        fetchAuditLogs();
+      }
     }
   }, [user, localAdmin, activeTab]);
 
@@ -247,6 +308,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
       }
       
       setContacts(contacts.filter(c => c.id !== id));
+      await logAdminAction(isPermanent ? 'delete' : 'update', 'Inquiry', `${isPermanent ? 'Permanently deleted' : 'Moved to trash'} inquiry: ${id}`);
       setToast({ message: `Inquiry successfully ${isPermanent ? 'deleted' : 'moved to trash'}.`, type: 'success' });
       if (selectedInquiry?.id === id) {
         setSelectedInquiry(null);
@@ -292,12 +354,67 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
       }).filter(Boolean) as any[];
       
       setContacts(newContacts);
+      await logAdminAction(action === 'delete' ? 'delete' : 'update', 'Inquiry Bulk', `Applied '${action}' to ${selectedInquiries.length} inquiries.`);
       setSelectedInquiries([]);
       setToast({ message: `Bulk action applied to ${selectedInquiries.length} inquiries.`, type: 'success' });
     } catch (error) {
       console.error("Bulk action error:", error);
       setToast({ message: "Error performing bulk action.", type: "error" });
     }
+  };
+
+  const exportToCSV = () => {
+    if (contacts.length === 0) {
+      setToast({ message: "No inquiries to export.", type: "error" });
+      return;
+    }
+
+    // Determine which contacts to export (filtered list)
+    const contactsToExport = contacts.filter(c => {
+      if (inquiryFilterStatus === 'all') return c.status !== 'deleted';
+      return c.status === inquiryFilterStatus;
+    }).filter(c => 
+      (c.id || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
+      (c.name || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
+      (c.email || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
+      (c.subject || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
+      (c.message || '').toLowerCase().includes(inquirySearchQuery.toLowerCase())
+    );
+
+    if (contactsToExport.length === 0) {
+      setToast({ message: "No inquiries match your current filters.", type: "error" });
+      return;
+    }
+
+    const headers = ['ID', 'Date', 'Name', 'Email', 'Subject', 'Message', 'Status', 'Is Favorite'];
+    
+    const csvContent = [
+      headers.join(','),
+      ...contactsToExport.map(c => {
+        return [
+          `"${c.id}"`,
+          `"${new Date(c.createdAt).toLocaleString()}"`,
+          `"${(c.name || '').replace(/"/g, '""')}"`,
+          `"${(c.email || '').replace(/"/g, '""')}"`,
+          `"${(c.subject || '').replace(/"/g, '""')}"`,
+          `"${(c.message || '').replace(/"/g, '""')}"`,
+          `"${c.status || 'new'}"`,
+          `"${c.isFavorite ? 'Yes' : 'No'}"`
+        ].join(',');
+      })
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `poststatus_inquiries_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setToast({ message: `Exported ${contactsToExport.length} inquiries to CSV.`, type: 'success' });
   };
 
   const generatePDF = (inquiry: any) => {
@@ -372,6 +489,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     setIsSaving(true);
     try {
       await updateFeature(editingFeature);
+      await logAdminAction('update', 'Feature', `Updated feature configuration: ${editingFeature.title}`);
       setToast({ message: "Feature card details updated and broadcasted to live users.", type: 'success' });
       setEditingFeature(null);
       setTimeout(() => setToast(null), 4000);
@@ -499,6 +617,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
         realWorldCase3Desc: '',
         videoUrl: '',
       });
+      await logAdminAction('create', 'Feature', `Created new feature: ${newFeature.title}`);
       setToast({ message: "New feature card deployed successfully!", type: 'success' });
       setTimeout(() => setToast(null), 4000);
     } catch (err) {
@@ -513,6 +632,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     if (confirm("Are you sure you want to permanently DELETE this feature card? This is completely irreversible.")) {
       try {
         await deleteFeature(id);
+        await logAdminAction('delete', 'Feature', `Permanently deleted feature: ${id}`);
         setToast({ message: "Feature card has been permanently deleted and removed.", type: 'success' });
         setTimeout(() => setToast(null), 4000);
       } catch (err) {
@@ -528,6 +648,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     setIsSaving(true);
     try {
       await updatePricingPlan(editingPlan);
+      await logAdminAction('update', 'Pricing', `Updated pricing plan: ${editingPlan.name}`);
       setEditingPlan(null);
       setToast({ message: "Pricing plan levels saved and synced in real-time.", type: 'success' });
       setTimeout(() => setToast(null), 4000);
@@ -544,6 +665,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     setIsSaving(true);
     try {
       await updateSettings(settings);
+      await logAdminAction('update', 'Settings', 'Updated global site configurations.');
       setToast({ message: "Global site settings updated successfully!", type: 'success' });
       setTimeout(() => setToast(null), 4000);
     } catch (err) {
@@ -567,6 +689,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
       setNewFaqQuestion('');
       setNewFaqAnswer('');
       setIsAddingFAQ(false);
+      await logAdminAction('create', 'FAQ', `Added new FAQ query: ${newFaqQuestion}`);
       setToast({ message: "New query added to FAQ knowledgebase.", type: 'success' });
       setTimeout(() => setToast(null), 4000);
     } catch (err) {
@@ -583,6 +706,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     setIsSaving(true);
     try {
       await updateFAQ(editingFAQ);
+      await logAdminAction('update', 'FAQ', `Updated FAQ record: ${editingFAQ.question}`);
       setEditingFAQ(null);
       setToast({ message: "FAQ record updated successfully.", type: 'success' });
       setTimeout(() => setToast(null), 4000);
@@ -598,6 +722,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     if (confirm("Are you sure you want to delete this FAQ?")) {
       try {
         await deleteFAQ(id);
+        await logAdminAction('delete', 'FAQ', `Deleted FAQ record: ${id}`);
       } catch (err) {
         alert("Error deleting FAQ.");
       }
@@ -608,6 +733,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     if (confirm("Are you sure you want to RESET all data to the beautifully designed default template data? This will overwrite existing custom changes in Firestore.")) {
       try {
         await resetToDefaults();
+        await logAdminAction('delete', 'System', 'Issued Database Reset to Defaults.');
         alert("Database successfully reset to beautiful template defaults!");
       } catch (err) {
         alert("Error resetting. Make sure you are authenticated as developer.");
@@ -1137,6 +1263,83 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                       <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-[10px] text-slate-400 font-mono shrink-0">
                         Admin: <span className="text-white font-sans font-semibold">mdakash136915@gmail.com</span>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* System Audit Logs Container */}
+                  <div className="p-6 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-900 shadow-xl space-y-6">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                      <div>
+                        <h4 className="font-display font-semibold text-white text-base">System Audit Logs</h4>
+                        <p className="text-xs text-slate-400 mt-1">Real-time trail of administrative and structural changes.</p>
+                      </div>
+                      <button className="text-xs text-blue-400 hover:text-white transition-colors bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1.5 rounded-lg border border-blue-500/20">
+                        Export Logs to CSV
+                      </button>
+                    </div>
+
+                    <div className="bg-slate-950 border border-slate-900 rounded-xl overflow-hidden shadow-inner">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-slate-900/80 border-b border-slate-850 text-slate-400 font-semibold tracking-wider uppercase text-[10px]">
+                            <th className="p-3 pl-4">Timestamp</th>
+                            <th className="p-3">Event Type</th>
+                            <th className="p-3">Actor / User</th>
+                            <th className="p-3">Details</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-850/50">
+                          {fetchingLogs && auditLogs.length === 0 ? (
+                            <tr>
+                              <td colSpan={4} className="p-8 text-center text-slate-500">
+                                <Icons.RefreshCw className="w-5 h-5 animate-spin mx-auto mb-3 text-blue-400" />
+                                Loading logs...
+                              </td>
+                            </tr>
+                          ) : auditLogs.length > 0 ? (
+                            auditLogs.map((log) => {
+                              // Determine icon and color based on category/type
+                              let EventIcon = Icons.Activity;
+                              let colorClass = "text-slate-400 bg-slate-500/10 border-slate-500/20";
+                              
+                              if (log.actionType === 'login' || log.actionCategory === 'System') {
+                                EventIcon = Icons.ShieldAlert;
+                                colorClass = "text-amber-400 bg-amber-500/10 border-amber-500/20";
+                              } else if (log.actionType === 'delete') {
+                                EventIcon = Icons.Trash2;
+                                colorClass = "text-rose-400 bg-rose-500/10 border-rose-500/20";
+                              } else if (log.actionType === 'create') {
+                                EventIcon = Icons.PlusCircle;
+                                colorClass = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+                              } else if (log.actionType === 'update') {
+                                EventIcon = Icons.RefreshCw;
+                                colorClass = "text-blue-400 bg-blue-500/10 border-blue-500/20";
+                              }
+
+                              return (
+                                <tr key={log.id} className="hover:bg-slate-900/50 transition-colors">
+                                  <td className="p-3 pl-4 font-mono text-[10px] text-slate-500">
+                                    {new Date(log.timestamp).toLocaleString()}
+                                  </td>
+                                  <td className="p-3">
+                                    <span className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[10px] w-max ${colorClass}`}>
+                                      <EventIcon className="w-3 h-3" /> {log.actionCategory || 'Action'}
+                                    </span>
+                                  </td>
+                                  <td className="p-3 text-slate-300">{log.actor}</td>
+                                  <td className="p-3 text-slate-400 truncate max-w-xs" title={log.details}>{log.details}</td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                              <td colSpan={4} className="p-8 text-center text-slate-500 font-mono text-xs">
+                                No audit logs found.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>
@@ -2633,7 +2836,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                         <div className="flex gap-2 w-full sm:w-auto flex-1 sm:flex-none">
                           <input
                             type="text"
-                            placeholder="Search content..."
+                            placeholder="Search content or ID..."
                             value={inquirySearchQuery}
                             onChange={(e) => setInquirySearchQuery(e.target.value)}
                             className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500"
@@ -2645,8 +2848,24 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                           >
                             <RefreshCw className={`w-4 h-4 text-slate-400 ${fetchingContacts ? 'animate-spin text-blue-400' : ''}`} />
                           </button>
+                          <button 
+                            onClick={exportToCSV}
+                            className="p-2.5 hidden sm:flex items-center justify-center bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl cursor-pointer transition-colors shrink-0"
+                            title="Export CSV"
+                          >
+                            <Icons.Download className="w-4 h-4 text-emerald-400" />
+                          </button>
                         </div>
                      </div>
+                   </div>
+
+                   <div className="flex sm:hidden gap-2 w-full mt-2">
+                      <button 
+                        onClick={exportToCSV}
+                        className="px-4 py-2.5 w-full flex items-center justify-center gap-2 text-xs font-semibold bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl cursor-pointer transition-colors text-emerald-400"
+                      >
+                        <Icons.Download className="w-4 h-4" /> Export Filtered to CSV
+                      </button>
                    </div>
 
                    <div className="bg-slate-950 border border-slate-900 rounded-2xl overflow-hidden shadow-xl overflow-x-auto hide-scrollbar">
@@ -2678,18 +2897,10 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                                   <input 
                                     type="checkbox" 
                                     className="rounded border-slate-800 bg-slate-950 text-blue-500 focus:ring-blue-500/30 cursor-pointer"
-                                    checked={contacts.length > 0 && selectedInquiries.length === contacts.filter(c => inquiryFilterStatus === 'all' ? c.status !== 'deleted' : c.status === inquiryFilterStatus).length}
+                                    checked={filteredInquiries.length > 0 && selectedInquiries.length === filteredInquiries.length}
                                     onChange={(e) => {
                                       if (e.target.checked) {
-                                        const visibleIds = contacts
-                                          .filter(c => inquiryFilterStatus === 'all' ? c.status !== 'deleted' : c.status === inquiryFilterStatus)
-                                          .filter(c => 
-                                            (c.name || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
-                                            (c.email || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
-                                            (c.subject || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
-                                            (c.message || '').toLowerCase().includes(inquirySearchQuery.toLowerCase())
-                                          )
-                                          .map(c => c.id);
+                                        const visibleIds = filteredInquiries.map(c => c.id);
                                         setSelectedInquiries(visibleIds);
                                       } else {
                                         setSelectedInquiries([]);
@@ -2706,18 +2917,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                               </tr>
                             </thead>
                             <tbody>
-                              {contacts
-                                .filter(c => {
-                                  if (inquiryFilterStatus === 'all') return c.status !== 'deleted';
-                                  return c.status === inquiryFilterStatus;
-                                })
-                                .filter(c => 
-                                  (c.name || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
-                                  (c.email || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
-                                  (c.subject || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
-                                  (c.message || '').toLowerCase().includes(inquirySearchQuery.toLowerCase())
-                                )
-                                .map((contact) => (
+                              {paginatedInquiries.map((contact) => (
                                 <tr key={contact.id} className={`border-b border-slate-850/50 hover:bg-slate-900/70 transition-colors ${selectedInquiries.includes(contact.id) ? 'bg-slate-900/50' : ''}`}>
                                   <td className="p-4 pl-6">
                                     <input 
@@ -2802,7 +3002,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                                 </td>
                               </tr>
                             ))}
-                            {contacts.length > 0 && contacts.filter(c => inquiryFilterStatus === 'all' ? c.status !== 'deleted' : c.status === inquiryFilterStatus).length === 0 && (
+                            {filteredInquiries.length === 0 && (
                               <tr>
                                 <td colSpan={7} className="p-8 text-center text-slate-500">
                                   No inquiries found matching your filters.
@@ -2811,6 +3011,60 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                             )}
                           </tbody>
                         </table>
+                        
+                        {/* Pagination Controls */}
+                        {totalInquiriesPages > 1 && (
+                          <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-slate-800 gap-4">
+                            <span className="text-xs text-slate-400">
+                              Showing {((inquiriesCurrentPage - 1) * INQUIRIES_PER_PAGE) + 1} to {Math.min(inquiriesCurrentPage * INQUIRIES_PER_PAGE, filteredInquiries.length)} of {filteredInquiries.length} entries
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <button 
+                                onClick={() => setInquiriesCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={inquiriesCurrentPage === 1}
+                                className="px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              >
+                                Previous
+                              </button>
+                              
+                              {/* Simple page numbers */}
+                              {Array.from({ length: totalInquiriesPages }).map((_, i) => {
+                                // Show few pages around current to avoid overflow
+                                if (
+                                  totalInquiriesPages <= 5 || 
+                                  i === 0 || 
+                                  i === totalInquiriesPages - 1 || 
+                                  (i + 1 >= inquiriesCurrentPage - 1 && i + 1 <= inquiriesCurrentPage + 1)
+                                ) {
+                                  return (
+                                    <button 
+                                      key={i} 
+                                      onClick={() => setInquiriesCurrentPage(i + 1)}
+                                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${inquiriesCurrentPage === i + 1 ? 'bg-blue-600 text-white' : 'hover:bg-slate-800 text-slate-300 border border-slate-800'}`}
+                                    >
+                                      {i + 1}
+                                    </button>
+                                  );
+                                }
+                                
+                                // Ellipsis
+                                if (i + 1 === inquiriesCurrentPage - 2 || i + 1 === inquiriesCurrentPage + 2) {
+                                  return <span key={i} className="px-2 text-slate-500">...</span>;
+                                }
+                                
+                                return null;
+                              })}
+                              
+                              <button 
+                                onClick={() => setInquiriesCurrentPage(p => Math.min(totalInquiriesPages, p + 1))}
+                                disabled={inquiriesCurrentPage === totalInquiriesPages}
+                                className="px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              >
+                                Next
+                              </button>
+                            </div>
+                          </div>
+                        )}
                         </>
                       )}
                    </div>
