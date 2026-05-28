@@ -5,7 +5,7 @@ import {
   db
 } from '../lib/firebase';
 import { 
-  collection, getDocs, deleteDoc, doc, updateDoc
+  collection, getDocs, deleteDoc, doc, updateDoc, writeBatch
 } from 'firebase/firestore';
 import { 
   signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword 
@@ -61,6 +61,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [inquiryFilterStatus, setInquiryFilterStatus] = useState<'all' | 'new' | 'read' | 'replied'>('all');
   const [contacts, setContacts] = useState<any[]>([]);
   const [fetchingContacts, setFetchingContacts] = useState(false);
+  const [selectedInquiries, setSelectedInquiries] = useState<string[]>([]);
   const [selectedInquiry, setSelectedInquiry] = useState<any | null>(null);
   const [featureViewMode, setFeatureViewMode] = useState<'grid' | 'list'>('grid');
   const [showUnsavedWarningPopup, setShowUnsavedWarningPopup] = useState(false);
@@ -207,15 +208,23 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     setFetchingContacts(true);
     try {
       const contactsSnapshot = await getDocs(collection(db, "contacts"));
-      const contactsList = contactsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const contactsList = contactsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name || "Unknown",
+          email: data.email || "",
+          message: data.message || "",
+          subject: data.subject || "",
+          status: data.status || "new",
+          createdAt: data.createdAt || new Date().toISOString()
+        };
+      }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
       setContacts(contactsList);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching contacts:", error);
-      setToast({ message: "Failed to load inquiries.", type: "error" });
+      setToast({ message: error.message || "Failed to load inquiries.", type: "error" });
     } finally {
       setFetchingContacts(false);
     }
@@ -245,6 +254,49 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     } catch (error) {
       console.error("Error deleting contact:", error);
       setToast({ message: "Error deleting inquiry.", type: "error" });
+    }
+  };
+
+  const handleBulkAction = async (action: 'read' | 'new' | 'replied' | 'trash' | 'delete' | 'favorite' | 'unfavorite') => {
+    if (selectedInquiries.length === 0) return;
+    
+    const isDelete = action === 'delete';
+    const isTrash = action === 'trash';
+    
+    if ((isDelete || isTrash) && !confirm(`Are you sure you want to ${isDelete ? 'permanently delete' : 'move to trash'} ${selectedInquiries.length} selected inquiries?`)) return;
+
+    try {
+      const batch = writeBatch(db);
+      
+      selectedInquiries.forEach(id => {
+        const ref = doc(db, "contacts", id);
+        if (isDelete) {
+          batch.delete(ref);
+        } else if (isTrash) {
+          batch.update(ref, { status: 'deleted' });
+        } else if (action === 'favorite' || action === 'unfavorite') {
+          batch.update(ref, { isFavorite: action === 'favorite' });
+        } else {
+          batch.update(ref, { status: action });
+        }
+      });
+      
+      await batch.commit();
+      
+      const newContacts = contacts.map(c => {
+        if (!selectedInquiries.includes(c.id)) return c;
+        if (isDelete) return null;
+        if (isTrash) return { ...c, status: 'deleted' };
+        if (action === 'favorite' || action === 'unfavorite') return { ...c, isFavorite: action === 'favorite' };
+        return { ...c, status: action };
+      }).filter(Boolean) as any[];
+      
+      setContacts(newContacts);
+      setSelectedInquiries([]);
+      setToast({ message: `Bulk action applied to ${selectedInquiries.length} inquiries.`, type: 'success' });
+    } catch (error) {
+      console.error("Bulk action error:", error);
+      setToast({ message: "Error performing bulk action.", type: "error" });
     }
   };
 
@@ -835,11 +887,11 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
         {/* Content Area */}
         <div className="flex-1 flex flex-col min-w-0 bg-slate-950 md:h-screen h-screen overflow-y-auto w-full relative">
           {/* Header */}
-          <div className="flex sm:items-center justify-between gap-4 border-b border-slate-900 p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm sticky top-0 z-10 w-full sm:flex-row shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
-            <div className="min-w-0 flex items-start sm:items-center gap-4">
+          <div className="flex items-center justify-between gap-4 border-b border-slate-900 p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm sticky top-0 z-10 w-full shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
+            <div className="min-w-0 flex items-center gap-3 sm:gap-4">
               <button 
                 onClick={() => setIsMobileMenuOpen(true)}
-                className="md:hidden mt-0.5 sm:mt-0 p-2 -ml-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                className="md:hidden p-2 -ml-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <Icons.Menu className="w-5 h-5" />
               </button>
@@ -2592,34 +2644,98 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                           <RefreshCw className="w-5 h-5 animate-spin mr-3 text-blue-400" /> Loading inquiries...
                         </div>
                       ) : (
-                        <table className="w-full text-left text-sm border-collapse min-w-[800px]">
-                          <thead>
-                            <tr className="bg-slate-900/80 border-b border-slate-850 text-slate-400 font-semibold tracking-wider uppercase text-[10px]">
-                              <th className="p-4 pl-6">Date</th>
-                              <th className="p-4">Customer</th>
-                              <th className="p-4">Subject</th>
-                              <th className="p-4">Status</th>
-                              <th className="p-4 pr-6 text-right">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {contacts
-                              .filter(c => {
-                                if (inquiryFilterStatus === 'all') return c.status !== 'deleted';
-                                return c.status === inquiryFilterStatus;
-                              })
-                              .filter(c => 
-                                (c.name || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
-                                (c.email || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
-                                (c.subject || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
-                                (c.message || '').toLowerCase().includes(inquirySearchQuery.toLowerCase())
-                              )
-                              .map((contact) => (
-                              <tr key={contact.id} className="border-b border-slate-850/50 hover:bg-slate-900/40 transition-colors">
-                                <td className="p-4 pl-6 text-slate-400 text-xs whitespace-nowrap">
-                                  {new Date(contact.createdAt).toLocaleDateString()}<br/>
-                                  <span className="text-[10px] text-slate-500">{new Date(contact.createdAt).toLocaleTimeString()}</span>
-                                </td>
+                        <>
+                          {selectedInquiries.length > 0 && (
+                            <div className="bg-slate-900 border-b border-slate-800 p-3 flex flex-wrap items-center justify-between gap-4 animate-fade-in">
+                              <span className="text-sm font-medium text-slate-300 pl-4">
+                                {selectedInquiries.length} item{selectedInquiries.length > 1 ? 's' : ''} selected
+                              </span>
+                              <div className="flex flex-wrap items-center gap-2 pr-2">
+                                <button onClick={() => handleBulkAction('read')} className="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg transition-colors border border-slate-700">Mark Read</button>
+                                <button onClick={() => handleBulkAction('replied')} className="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-lg transition-colors border border-slate-700">Mark Replied</button>
+                                <button onClick={() => handleBulkAction('favorite')} className="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-pink-400 rounded-lg transition-colors border border-slate-700 flex items-center gap-1"><Icons.Star className="w-3.5 h-3.5" /> Favorite</button>
+                                <div className="w-px h-6 bg-slate-800 mx-1"></div>
+                                <button onClick={() => handleBulkAction('trash')} className="px-3 py-1.5 text-xs font-semibold bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 rounded-lg transition-colors border border-rose-900/40 flex items-center gap-1"><Icons.Trash2 className="w-3.5 h-3.5" /> Trash</button>
+                                <button onClick={() => handleBulkAction('delete')} className="px-3 py-1.5 text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition-colors border border-rose-700 flex items-center gap-1"><Icons.AlertCircle className="w-3.5 h-3.5" /> Delete Forever</button>
+                              </div>
+                            </div>
+                          )}
+                          <table className="w-full text-left text-sm border-collapse min-w-[900px]">
+                            <thead>
+                              <tr className="bg-slate-900/80 border-b border-slate-850 text-slate-400 font-semibold tracking-wider uppercase text-[10px]">
+                                <th className="p-4 pl-6 w-12">
+                                  <input 
+                                    type="checkbox" 
+                                    className="rounded border-slate-800 bg-slate-950 text-blue-500 focus:ring-blue-500/30 cursor-pointer"
+                                    checked={contacts.length > 0 && selectedInquiries.length === contacts.filter(c => inquiryFilterStatus === 'all' ? c.status !== 'deleted' : c.status === inquiryFilterStatus).length}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        const visibleIds = contacts
+                                          .filter(c => inquiryFilterStatus === 'all' ? c.status !== 'deleted' : c.status === inquiryFilterStatus)
+                                          .filter(c => 
+                                            (c.name || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
+                                            (c.email || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
+                                            (c.subject || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
+                                            (c.message || '').toLowerCase().includes(inquirySearchQuery.toLowerCase())
+                                          )
+                                          .map(c => c.id);
+                                        setSelectedInquiries(visibleIds);
+                                      } else {
+                                        setSelectedInquiries([]);
+                                      }
+                                    }}
+                                  />
+                                </th>
+                                <th className="p-4 w-12 text-center text-slate-500"><Icons.Star className="w-3.5 h-3.5 mx-auto" /></th>
+                                <th className="p-4">Date</th>
+                                <th className="p-4">Customer</th>
+                                <th className="p-4">Subject</th>
+                                <th className="p-4">Status</th>
+                                <th className="p-4 pr-6 text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {contacts
+                                .filter(c => {
+                                  if (inquiryFilterStatus === 'all') return c.status !== 'deleted';
+                                  return c.status === inquiryFilterStatus;
+                                })
+                                .filter(c => 
+                                  (c.name || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
+                                  (c.email || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
+                                  (c.subject || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
+                                  (c.message || '').toLowerCase().includes(inquirySearchQuery.toLowerCase())
+                                )
+                                .map((contact) => (
+                                <tr key={contact.id} className={`border-b border-slate-850/50 hover:bg-slate-900/70 transition-colors ${selectedInquiries.includes(contact.id) ? 'bg-slate-900/50' : ''}`}>
+                                  <td className="p-4 pl-6">
+                                    <input 
+                                      type="checkbox" 
+                                      className="rounded border-slate-800 bg-slate-950 text-blue-500 focus:ring-blue-500/30 cursor-pointer"
+                                      checked={selectedInquiries.includes(contact.id)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) setSelectedInquiries([...selectedInquiries, contact.id]);
+                                        else setSelectedInquiries(selectedInquiries.filter(id => id !== contact.id));
+                                      }}
+                                    />
+                                  </td>
+                                  <td className="p-4 text-center">
+                                    <button 
+                                      onClick={async () => {
+                                        try {
+                                          await updateDoc(doc(db, "contacts", contact.id), { isFavorite: !contact.isFavorite });
+                                          setContacts(contacts.map(c => c.id === contact.id ? { ...c, isFavorite: !c.isFavorite } : c));
+                                        } catch (err) {}
+                                      }}
+                                      className="cursor-pointer transition-colors"
+                                    >
+                                      <Icons.Star className={`w-4 h-4 ${contact.isFavorite ? 'text-pink-500 fill-pink-500' : 'text-slate-600 hover:text-slate-400'}`} />
+                                    </button>
+                                  </td>
+                                  <td className="p-4 text-slate-400 text-xs whitespace-nowrap">
+                                    {new Date(contact.createdAt).toLocaleDateString()}<br/>
+                                    <span className="text-[10px] text-slate-500">{new Date(contact.createdAt).toLocaleTimeString()}</span>
+                                  </td>
                                 <td className="p-4">
                                   <div className="font-semibold text-white">{contact.name}</div>
                                   <div className="text-xs text-slate-400">{contact.email}</div>
@@ -2677,13 +2793,14 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                             ))}
                             {contacts.length > 0 && contacts.filter(c => inquiryFilterStatus === 'all' ? c.status !== 'deleted' : c.status === inquiryFilterStatus).length === 0 && (
                               <tr>
-                                <td colSpan={5} className="p-8 text-center text-slate-500">
+                                <td colSpan={7} className="p-8 text-center text-slate-500">
                                   No inquiries found matching your filters.
                                 </td>
                               </tr>
                             )}
                           </tbody>
                         </table>
+                        </>
                       )}
                    </div>
                  </div>
@@ -3850,16 +3967,19 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                 <div className="flex items-center gap-2">
                   <a 
                     href={`mailto:${selectedInquiry.email}?subject=RE: ${selectedInquiry.subject}`}
-                    className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-lg shadow-blue-500/20"
+                    className="p-2 sm:px-4 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center shadow-lg shadow-blue-500/20"
+                    title="Reply via Email"
                   >
-                    <Mail className="w-4 h-4" />
-                    Reply via Email
+                    <Mail className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-1.5" />
+                    <span className="hidden sm:inline">Reply via Email</span>
                   </a>
                   <button
                     onClick={() => handleDeleteContact(selectedInquiry.id, selectedInquiry.status === 'deleted')}
-                    className="px-4 py-2.5 rounded-xl bg-rose-950 hover:bg-rose-900 text-rose-400 font-bold text-xs transition-colors cursor-pointer border border-rose-900 hover:border-rose-800"
+                    className="p-2 sm:px-4 sm:py-2.5 rounded-xl bg-rose-950 hover:bg-rose-900 text-rose-400 font-bold text-xs transition-colors cursor-pointer border border-rose-900 hover:border-rose-800 flex items-center justify-center"
+                    title={selectedInquiry.status === 'deleted' ? 'Delete Permanently' : 'Move to Trash'}
                   >
-                    {selectedInquiry.status === 'deleted' ? 'Delete Permanently' : 'Move to Trash'}
+                    <Trash2 className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-1.5" />
+                    <span className="hidden sm:inline">{selectedInquiry.status === 'deleted' ? 'Delete Permanently' : 'Move to Trash'}</span>
                   </button>
                 </div>
               </div>
