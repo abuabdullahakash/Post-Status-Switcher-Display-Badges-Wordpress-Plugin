@@ -231,10 +231,10 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   };
 
   useEffect(() => {
-    if (user && activeTab === 'inquiries') {
+    if ((user || localAdmin) && activeTab === 'inquiries') {
       fetchContacts();
     }
-  }, [user, activeTab]);
+  }, [user, localAdmin, activeTab]);
 
   const handleDeleteContact = async (id: string, isPermanent: boolean = false) => {
     if (!confirm(`Are you sure you want to ${isPermanent ? 'permanently delete' : 'move to trash'} this inquiry?`)) return;
@@ -2604,37 +2604,48 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
               {/* INQUIRIES TAB */}
               {activeTab === 'inquiries' && (
                  <div className="space-y-6">
-                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                   <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                      <div>
                        <h3 className="text-xl font-display font-bold text-white">Contact Form Inquiries</h3>
                        <p className="text-sm text-slate-400">Manage and view messages submitted by visitors.</p>
                      </div>
-                     <div className="flex flex-wrap md:flex-nowrap items-center gap-2">
-                        <select 
-                          value={inquiryFilterStatus}
-                          onChange={(e) => setInquiryFilterStatus(e.target.value as any)}
-                          className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 min-w-[120px]"
-                        >
-                          <option value="all">All Submissions</option>
-                          <option value="new">New</option>
-                          <option value="read">Read</option>
-                          <option value="replied">Replied</option>
-                          <option value="deleted">Trash</option>
-                        </select>
-                        <input
-                          type="text"
-                          placeholder="Search content..."
-                          value={inquirySearchQuery}
-                          onChange={(e) => setInquirySearchQuery(e.target.value)}
-                          className="w-full md:w-auto bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500"
-                        />
-                        <button 
-                          onClick={fetchContacts}
-                          className="p-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl cursor-pointer transition-colors"
-                          title="Refresh"
-                        >
-                          <RefreshCw className={`w-4 h-4 text-slate-400 ${fetchingContacts ? 'animate-spin text-blue-400' : ''}`} />
-                        </button>
+                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto">
+                        <div className="flex gap-2 w-full sm:w-auto flex-1 sm:flex-none">
+                          <select 
+                            value={inquiryFilterStatus}
+                            onChange={(e) => setInquiryFilterStatus(e.target.value as any)}
+                            className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 flex-1 sm:flex-none min-w-[140px]"
+                          >
+                            <option value="all">All Submissions</option>
+                            <option value="new">New</option>
+                            <option value="read">Read</option>
+                            <option value="replied">Replied</option>
+                            <option value="deleted">Trash</option>
+                          </select>
+                          <button 
+                            onClick={fetchContacts}
+                            className="p-2.5 flex items-center justify-center bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl cursor-pointer transition-colors sm:hidden shrink-0"
+                            title="Refresh"
+                          >
+                            <RefreshCw className={`w-5 h-5 text-slate-400 ${fetchingContacts ? 'animate-spin text-blue-400' : ''}`} />
+                          </button>
+                        </div>
+                        <div className="flex gap-2 w-full sm:w-auto flex-1 sm:flex-none">
+                          <input
+                            type="text"
+                            placeholder="Search content..."
+                            value={inquirySearchQuery}
+                            onChange={(e) => setInquirySearchQuery(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500"
+                          />
+                          <button 
+                            onClick={fetchContacts}
+                            className="p-2.5 hidden sm:flex items-center justify-center bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl cursor-pointer transition-colors shrink-0"
+                            title="Refresh"
+                          >
+                            <RefreshCw className={`w-4 h-4 text-slate-400 ${fetchingContacts ? 'animate-spin text-blue-400' : ''}`} />
+                          </button>
+                        </div>
                      </div>
                    </div>
 
@@ -2646,17 +2657,17 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                       ) : (
                         <>
                           {selectedInquiries.length > 0 && (
-                            <div className="bg-slate-900 border-b border-slate-800 p-3 flex flex-wrap items-center justify-between gap-4 animate-fade-in">
-                              <span className="text-sm font-medium text-slate-300 pl-4">
+                            <div className="bg-slate-900/80 border-b border-slate-800 p-3 sm:px-4 sm:py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 animate-fade-in w-full">
+                              <span className="text-sm font-semibold text-slate-300 w-full sm:w-auto pb-2 sm:pb-0 border-b sm:border-0 border-slate-800">
                                 {selectedInquiries.length} item{selectedInquiries.length > 1 ? 's' : ''} selected
                               </span>
-                              <div className="flex flex-wrap items-center gap-2 pr-2">
-                                <button onClick={() => handleBulkAction('read')} className="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg transition-colors border border-slate-700">Mark Read</button>
-                                <button onClick={() => handleBulkAction('replied')} className="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-lg transition-colors border border-slate-700">Mark Replied</button>
-                                <button onClick={() => handleBulkAction('favorite')} className="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-pink-400 rounded-lg transition-colors border border-slate-700 flex items-center gap-1"><Icons.Star className="w-3.5 h-3.5" /> Favorite</button>
-                                <div className="w-px h-6 bg-slate-800 mx-1"></div>
-                                <button onClick={() => handleBulkAction('trash')} className="px-3 py-1.5 text-xs font-semibold bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 rounded-lg transition-colors border border-rose-900/40 flex items-center gap-1"><Icons.Trash2 className="w-3.5 h-3.5" /> Trash</button>
-                                <button onClick={() => handleBulkAction('delete')} className="px-3 py-1.5 text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition-colors border border-rose-700 flex items-center gap-1"><Icons.AlertCircle className="w-3.5 h-3.5" /> Delete Forever</button>
+                              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                                <button onClick={() => handleBulkAction('read')} className="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg transition-colors border border-slate-700 flex-1 sm:flex-none justify-center flex">Mark Read</button>
+                                <button onClick={() => handleBulkAction('replied')} className="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-lg transition-colors border border-slate-700 flex-1 sm:flex-none justify-center flex">Mark Replied</button>
+                                <button onClick={() => handleBulkAction('favorite')} className="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-pink-400 rounded-lg transition-colors border border-slate-700 flex items-center justify-center gap-1 flex-1 sm:flex-none"><Icons.Star className="w-3.5 h-3.5" /> Favorite</button>
+                                <div className="w-full sm:w-px h-px sm:h-6 bg-slate-800 my-1 sm:my-0 sm:mx-1"></div>
+                                <button onClick={() => handleBulkAction('trash')} className="px-3 py-1.5 text-xs font-semibold bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 rounded-lg transition-colors border border-rose-900/40 flex items-center justify-center gap-1 flex-1 sm:flex-none"><Icons.Trash2 className="w-3.5 h-3.5" /> Trash</button>
+                                <button onClick={() => handleBulkAction('delete')} className="px-3 py-1.5 text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition-colors border border-rose-700 flex items-center justify-center gap-1 flex-1 sm:flex-none"><Icons.AlertCircle className="w-3.5 h-3.5" /> Delete Forever</button>
                               </div>
                             </div>
                           )}
