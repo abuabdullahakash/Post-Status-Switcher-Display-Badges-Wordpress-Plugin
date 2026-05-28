@@ -43,23 +43,6 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const pendingCreates = features.filter(f => f.pendingApproval === 'create');
   const pendingUpdates = features.filter(f => f.pendingApproval === 'update');
 
-  const filteredInquiries = contacts.filter(c => {
-    if (inquiryFilterStatus === 'all') return c.status !== 'deleted';
-    return c.status === inquiryFilterStatus;
-  }).filter(c => 
-    (c.id || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
-    (c.name || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
-    (c.email || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
-    (c.subject || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
-    (c.message || '').toLowerCase().includes(inquirySearchQuery.toLowerCase())
-  );
-
-  const totalInquiriesPages = Math.ceil(filteredInquiries.length / INQUIRIES_PER_PAGE);
-  const paginatedInquiries = filteredInquiries.slice(
-    (inquiriesCurrentPage - 1) * INQUIRIES_PER_PAGE,
-    inquiriesCurrentPage * INQUIRIES_PER_PAGE
-  );
-
   const [user, setUser] = useState<User | null>(null);
   const [localAdmin, setLocalAdmin] = useState<{ email: string; displayName: string } | null>(null);
   const [email, setEmail] = useState('');
@@ -130,6 +113,23 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   // Form fields
   const [newFaqQuestion, setNewFaqQuestion] = useState('');
   const [newFaqAnswer, setNewFaqAnswer] = useState('');
+
+  const filteredInquiries = contacts.filter(c => {
+    if (inquiryFilterStatus === 'all') return c.status !== 'deleted';
+    return c.status === inquiryFilterStatus;
+  }).filter(c => 
+    (c.id || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
+    (c.name || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
+    (c.email || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
+    (c.subject || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) ||
+    (c.message || '').toLowerCase().includes(inquirySearchQuery.toLowerCase())
+  );
+
+  const totalInquiriesPages = Math.ceil(filteredInquiries.length / INQUIRIES_PER_PAGE);
+  const paginatedInquiries = filteredInquiries.slice(
+    (inquiriesCurrentPage - 1) * INQUIRIES_PER_PAGE,
+    inquiriesCurrentPage * INQUIRIES_PER_PAGE
+  );
 
   // Track Superadmin state
   useEffect(() => {
