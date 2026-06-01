@@ -9,7 +9,8 @@ export const DEFAULT_FEATURES: Feature[] = [
     color: 'from-blue-500 to-indigo-500',
     useCase: 'Used when you want to automatically set the status of an event or job post to "Closed" or "Expired" after a specific time passes.',
     active: true,
-    order: 1
+    order: 1,
+    category: 'general'
   },
   {
     id: 'taxonomy-columns',
@@ -19,7 +20,8 @@ export const DEFAULT_FEATURES: Feature[] = [
     color: 'from-slate-500 to-gray-500',
     useCase: 'When you need to quickly track which category a post belongs to from the database or listing view.',
     active: true,
-    order: 2
+    order: 2,
+    category: 'general'
   },
   {
     id: 'stock-status',
@@ -29,7 +31,8 @@ export const DEFAULT_FEATURES: Feature[] = [
     color: 'from-emerald-400 to-teal-500',
     useCase: 'For e-commerce or product listing sites to inform customers about the current stock status of products.',
     active: true,
-    order: 3
+    order: 3,
+    category: 'ecommerce'
   },
   {
     id: 'flash-sale',
@@ -39,7 +42,8 @@ export const DEFAULT_FEATURES: Feature[] = [
     color: 'from-yellow-400 to-amber-500',
     useCase: 'Used on e-commerce sites to highlight massive discounts or offers on specific products.',
     active: true,
-    order: 4
+    order: 4,
+    category: 'ecommerce'
   },
   {
     id: 'property-status',
@@ -49,7 +53,8 @@ export const DEFAULT_FEATURES: Feature[] = [
     color: 'from-orange-400 to-red-500',
     useCase: 'Real estate websites (selling/renting apartments, houses, or land) to indicate the current status of the property to clients.',
     active: true,
-    order: 5
+    order: 5,
+    category: 'realestate'
   },
   {
     id: 'featured-properties',
@@ -59,7 +64,8 @@ export const DEFAULT_FEATURES: Feature[] = [
     color: 'from-purple-400 to-pink-500',
     useCase: 'Adding a "Featured" badge on sponsored or premium properties on a real estate website.',
     active: true,
-    order: 6
+    order: 6,
+    category: 'realestate'
   },
   {
     id: 'applicant-count',
@@ -69,7 +75,8 @@ export const DEFAULT_FEATURES: Feature[] = [
     color: 'from-blue-400 to-cyan-500',
     useCase: 'Job portal sites to display the current number of applications to candidates or companies.',
     active: true,
-    order: 7
+    order: 7,
+    category: 'jobportal'
   },
   {
     id: 'open-closed',
@@ -79,7 +86,8 @@ export const DEFAULT_FEATURES: Feature[] = [
     color: 'from-emerald-500 to-green-600',
     useCase: 'Used in job portals (hiring ongoing/closed) or local directory sites (shop/office open or closed).',
     active: true,
-    order: 8
+    order: 8,
+    category: 'jobportal'
   },
   {
     id: 'urgent-hiring',
@@ -89,7 +97,8 @@ export const DEFAULT_FEATURES: Feature[] = [
     color: 'from-red-500 to-rose-600',
     useCase: 'Job portals for positions where a company needs employees quickly. It instantly grabs candidates\' attention.',
     active: true,
-    order: 9
+    order: 9,
+    category: 'jobportal'
   },
   {
     id: 'remote-only',
@@ -99,7 +108,8 @@ export const DEFAULT_FEATURES: Feature[] = [
     color: 'from-sky-400 to-blue-500',
     useCase: 'Given as a badge on job portal listings for "Work From Home" opportunities.',
     active: true,
-    order: 10
+    order: 10,
+    category: 'jobportal'
   },
   {
     id: 'verified-profiles',
@@ -109,7 +119,8 @@ export const DEFAULT_FEATURES: Feature[] = [
     color: 'from-blue-500 to-indigo-600',
     useCase: 'Directory or community sites (like doctors, lawyers, or membership sites) to separate genuine profiles from fake ones.',
     active: true,
-    order: 11
+    order: 11,
+    category: 'directory'
   },
   {
     id: 'claimed-status',
@@ -119,7 +130,8 @@ export const DEFAULT_FEATURES: Feature[] = [
     color: 'from-teal-400 to-emerald-500',
     useCase: 'Directory sites (like Yelp or Yellow Pages) where owners can come and claim ownership of their businesses.',
     active: true,
-    order: 12
+    order: 12,
+    category: 'directory'
   },
   {
     id: 'upcoming-events',
@@ -129,7 +141,8 @@ export const DEFAULT_FEATURES: Feature[] = [
     color: 'from-indigo-400 to-purple-500',
     useCase: 'Event management or ticket selling sites to make upcoming events attractive.',
     active: true,
-    order: 13
+    order: 13,
+    category: 'event'
   },
   {
     id: 'sold-out',
@@ -139,7 +152,8 @@ export const DEFAULT_FEATURES: Feature[] = [
     color: 'from-gray-500 to-slate-600',
     useCase: 'When event ticket sales are finished.',
     active: true,
-    order: 14
+    order: 14,
+    category: 'event'
   },
   {
     id: 'enrollment-status',
@@ -149,7 +163,8 @@ export const DEFAULT_FEATURES: Feature[] = [
     color: 'from-amber-500 to-orange-600',
     useCase: 'Education or LMS (Learning Management System) sites to control the enrollment status of courses.',
     active: true,
-    order: 15
+    order: 15,
+    category: 'education'
   },
   {
     id: 'certificate-included',
@@ -159,7 +174,8 @@ export const DEFAULT_FEATURES: Feature[] = [
     color: 'from-yellow-400 to-amber-500',
     useCase: 'Education sites use this badge to signify extra value or benefits of a course.',
     active: true,
-    order: 16
+    order: 16,
+    category: 'education'
   }
 ];
 
@@ -313,6 +329,19 @@ export const DEFAULT_FAQS: FAQItem[] = [
   }
 ];
 
+export const DEFAULT_CATEGORIES = [
+  { id: 'custom', name: 'Custom Features', icon: 'Sparkles', color: 'text-pink-400' },
+  { id: 'general', name: 'General Features', icon: 'Columns', color: 'text-indigo-400' },
+  { id: 'ecommerce', name: 'E-commerce Features', icon: 'ShoppingCart', color: 'text-amber-400' },
+  { id: 'realestate', name: 'Real Estate Features', icon: 'Home', color: 'text-emerald-400' },
+  { id: 'jobportal', name: 'Job Portal Features', icon: 'Folder', color: 'text-yellow-500' },
+  { id: 'automotive', name: 'Automotive Features', icon: 'Car', color: 'text-red-400' },
+  { id: 'restaurant', name: 'Restaurant Features', icon: 'Utensils', color: 'text-rose-450' },
+  { id: 'directory', name: 'Directory Features', icon: 'BookOpen', color: 'text-teal-400' },
+  { id: 'event', name: 'Event Features', icon: 'Calendar', color: 'text-purple-450' },
+  { id: 'education', name: 'Education Features', icon: 'GraduationCap', color: 'text-sky-400' }
+];
+
 export const DEFAULT_SETTINGS: SiteSettings = {
   id: 'global',
   siteName: 'PostStatus',
@@ -335,5 +364,8 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   faqSectionSubtitle: 'Everything you need to know about the product, licensing, and installation.',
   pricingSectionTitle: 'Choose Your Plan',
   pricingSectionSubtitle: 'Simple, transparent pricing. Enhance your WordPress and JetEngine projects today.',
-  footerCopyrightText: 'PostStatus Switcher. Developed inside secure Cloud Workspace.'
+  footerCopyrightText: 'PostStatus Switcher. Developed inside secure Cloud Workspace.',
+  heroVideoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-spinning-glowing-globe-of-data-connections-42289-large.mp4',
+  heroVideoPoster: '',
+  categoriesList: DEFAULT_CATEGORIES
 };

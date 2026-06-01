@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, Play, CheckCircle2, RefreshCw, ArrowDownToLine } from 'lucide-react';
+import { ArrowRight, Play, CheckCircle2, RefreshCw, ArrowDownToLine, Filter, LayoutGrid } from 'lucide-react';
 import { useData } from '../context/DataContext';
 
 function getDirectDownloadUrl(url: string | undefined): string {
@@ -80,7 +80,7 @@ export default function Hero() {
             className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-medium mb-8"
           >
             <span className="flex h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></span>
-            New: Smart WooCommerce Integration
+            Seamless Addon for Crocoblock, Elementor & WooCommerce
           </motion.div>
           
           <motion.h1 
@@ -89,8 +89,8 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-5xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight mb-6 leading-tight"
           >
-            {settings.heroTitle} <br className="hidden md:block" />
-            <span className="text-gradient">{settings.heroSubtitle}</span>
+            Visual Query Builder <br className="hidden md:block" />
+            <span className="text-gradient">For JetEngine & Elementor</span>
           </motion.h1>
           
           <motion.p 
@@ -99,7 +99,7 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-lg md:text-xl text-slate-400 mb-10 max-w-3xl mx-auto leading-relaxed"
           >
-            {settings.heroDescription}
+            Turn complex JetEngine queries into a simple, visual experience. Fully compatible with Elementor Pro's Loop Grid, WooCommerce Post Types, and any custom CPT. Built to supercharge your WordPress workflows without writing a single line of code.
           </motion.p>
           
           <motion.div 
@@ -120,18 +120,18 @@ export default function Hero() {
               <span>{downloading ? "Downloading... ✅" : (settings.ctaButtonText || "Download Plugin")}</span>
             </button>
             <a 
-              href="#features" 
+              href="#docs" 
               onClick={(e) => {
                 e.preventDefault();
-                const featuresEl = document.getElementById('features');
-                if (featuresEl) {
-                  featuresEl.scrollIntoView({ behavior: 'smooth' });
+                const docEl = document.getElementById('docs');
+                if (docEl) {
+                  docEl.scrollIntoView({ behavior: 'smooth' });
                 }
               }}
               className="w-full sm:w-auto px-5 py-3 sm:px-8 sm:py-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium flex items-center justify-center gap-2 transition-all border border-slate-700 hover:border-slate-600 cursor-pointer text-xs sm:text-sm"
             >
               <Play className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>Explore Features</span>
+              <span>View Docs & Examples</span>
             </a>
           </motion.div>
         </div>
@@ -141,16 +141,37 @@ export default function Hero() {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.5 }}
-          className="relative max-w-5xl mx-auto rounded-2xl border border-slate-800 bg-slate-900/50 backdrop-blur-sm p-4 overflow-hidden shadow-2xl"
+          className={`relative max-w-5xl mx-auto rounded-2xl border border-slate-800 bg-slate-900/50 backdrop-blur-sm overflow-hidden shadow-2xl transition-all duration-300 ${settings.heroVideoUrl ? 'p-0' : 'p-4'}`}
         >
           {/* Browser Top Bar */}
-          <div className="flex items-center gap-2 mb-4 px-2">
-            <div className="w-3 h-3 rounded-full bg-red-500"></div>
-            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-            <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-          </div>
+          {settings.heroVideoUrl ? (
+            <div className="absolute top-4 left-4 z-30 flex items-center gap-1.5 bg-slate-950/70 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-800/60 shadow-lg select-none pointer-events-none">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500 shadow-[0_0_6px_rgba(234,179,8,0.5)]"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]"></div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 mb-4 px-2 select-none pointer-events-none">
+              <div className="w-3 h-3 rounded-full bg-red-500"></div>
+              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+              <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+            </div>
+          )}
           
-          {settings.heroImageUrl ? (
+          {settings.heroVideoUrl ? (
+            <div className="relative overflow-hidden aspect-[16/9] w-full bg-slate-950 flex items-center justify-center">
+              <video 
+                src={settings.heroVideoUrl} 
+                poster={settings.heroVideoPoster}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover brightness-100 transition-all duration-500"
+                style={{ pointerEvents: 'none' }}
+              />
+            </div>
+          ) : settings.heroImageUrl ? (
             <div className="relative rounded-xl overflow-hidden aspect-[16/9] border border-slate-800 max-h-[480px]">
               <img 
                 src={settings.heroImageUrl} 
@@ -161,69 +182,88 @@ export default function Hero() {
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Post Card 1 */}
-              <div className="rounded-xl bg-slate-800/80 border border-slate-700 overflow-hidden relative">
-                <div className="absolute top-3 left-3 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-1 rounded text-xs font-medium backdrop-blur-md">
-                  In Stock
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 h-[350px]">
+              {/* Sidebar Mockup */}
+              <div className="hidden md:flex flex-col col-span-3 bg-slate-900/80 border border-slate-800 rounded-xl p-4 space-y-4">
+                <div className="h-6 w-1/2 bg-blue-500/20 rounded"></div>
+                
+                <div className="space-y-2 mt-4">
+                  <div className="h-4 w-full bg-slate-800 rounded"></div>
+                  <div className="h-4 w-full bg-slate-800 rounded"></div>
+                  <div className="h-4 w-3/4 bg-slate-800 rounded"></div>
                 </div>
-                <div className="h-40 bg-slate-700 w-full animate-pulse"></div>
-                <div className="p-4">
-                  <div className="h-5 w-3/4 bg-slate-700 rounded mb-2"></div>
-                  <div className="h-4 w-1/2 bg-slate-700/50 rounded mb-6"></div>
-                  <div className="flex justify-between items-center">
-                    <span className="h-5 w-1/4 bg-slate-700 rounded"></span>
-                    <button className="p-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors cursor-pointer flex items-center gap-2">
-                      <RefreshCw className="w-4 h-4" />
-                      <span className="text-xs">Toggle</span>
-                    </button>
+
+                <div className="mt-8 space-y-3">
+                  <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Meta Query</div>
+                  <div className="h-8 w-full bg-slate-700/50 rounded flex items-center px-3 border border-slate-700">
+                    <span className="h-3 w-1/2 bg-slate-600 rounded"></span>
+                  </div>
+                  <div className="h-8 w-full bg-slate-700/50 rounded flex items-center px-3 border border-slate-700">
+                    <span className="h-3 w-2/3 bg-slate-600 rounded"></span>
                   </div>
                 </div>
               </div>
 
-              {/* Post Card 2 */}
-              <div className="rounded-xl bg-slate-800/80 border border-slate-700 overflow-hidden relative">
-                <div className="absolute top-3 left-3 bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-1 rounded text-xs font-medium backdrop-blur-md">
-                  Sold Out
-                </div>
-                <div className="h-40 bg-slate-700 w-full opacity-50"></div>
-                <div className="p-4">
-                  <div className="h-5 w-2/3 bg-slate-700 rounded mb-2"></div>
-                  <div className="h-4 w-1/3 bg-slate-700/50 rounded mb-6"></div>
-                  <div className="flex justify-between items-center">
-                    <span className="h-5 w-1/4 bg-slate-700 rounded"></span>
-                    <button className="p-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors cursor-pointer flex items-center gap-2">
-                      <RefreshCw className="w-4 h-4" />
-                      <span className="text-xs">Toggle</span>
-                    </button>
+              {/* Main Canvas Mockup */}
+              <div className="col-span-1 md:col-span-9 bg-slate-900/80 border border-slate-800 rounded-xl p-6 relative overflow-hidden flex flex-col">
+                <div className="flex justify-between items-center mb-6">
+                  <div className="flex gap-2 items-center text-sm font-medium text-slate-300">
+                    <div className="w-6 h-6 rounded-md bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    </div>
+                    Visual Query Editor Active
+                  </div>
+                  <div className="h-6 w-24 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] uppercase font-bold flex items-center justify-center rounded-md">
+                    Running Live
                   </div>
                 </div>
-              </div>
 
-              {/* Post Card 3 */}
-              <div className="rounded-xl bg-slate-800/80 border border-slate-700 overflow-hidden relative hidden md:block">
-                <div className="absolute top-3 left-3 bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-1 rounded text-xs font-medium backdrop-blur-md flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" />
-                  Available
-                </div>
-                <div className="h-40 bg-slate-700 w-full"></div>
-                <div className="p-4">
-                  <div className="h-5 w-full bg-slate-700 rounded mb-2"></div>
-                  <div className="h-4 w-2/3 bg-slate-700/50 rounded mb-6"></div>
-                  <div className="flex justify-between items-center">
-                    <span className="h-5 w-1/4 bg-slate-700 rounded"></span>
-                    <button className="p-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors cursor-pointer flex items-center gap-2">
-                      <RefreshCw className="w-4 h-4 text-blue-400 animate-spin-slow" />
-                      <span className="text-xs text-blue-400">Saving...</span>
-                    </button>
-                  </div>
+                {/* Node Canvas */}
+                <div className="flex-1 border border-slate-700/50 rounded-lg bg-slate-950/50 p-4 relative">
+                   {/* Connection Line */}
+                   <div className="absolute left-[150px] top-[40px] right-[150px] h-0.5 bg-gradient-to-r from-blue-500/50 to-purple-500/50"></div>
+
+                   <div className="flex justify-between relative mt-4">
+                     {/* Query Source Node */}
+                     <div className="w-40 bg-slate-800 border border-slate-700 rounded-lg p-3 shadow-lg relative z-10">
+                        <div className="text-xs text-slate-400 mb-2">Query Source</div>
+                        <div className="h-6 bg-slate-700 rounded flex items-center px-2">
+                           <span className="text-[10px] text-slate-200">Products (WooCommerce)</span>
+                        </div>
+                     </div>
+
+                     {/* Filters Node */}
+                     <div className="w-40 bg-slate-800 border border-blue-500/30 rounded-lg p-3 shadow-[0_0_15px_rgba(59,130,246,0.1)] relative z-10">
+                        <div className="text-xs text-blue-400 mb-2 font-medium flex items-center gap-1">
+                          <Filter className="w-3 h-3" /> Visual Filter
+                        </div>
+                        <div className="h-6 bg-slate-700 rounded flex items-center px-2 mb-1.5">
+                           <span className="text-[10px] text-slate-200">Price &gt; $50</span>
+                        </div>
+                        <div className="h-6 bg-slate-700 rounded flex items-center px-2">
+                           <span className="text-[10px] text-slate-200">In Stock: Yes</span>
+                        </div>
+                     </div>
+
+                     {/* Output Grid Node */}
+                     <div className="w-40 bg-slate-800 border border-purple-500/30 rounded-lg p-3 shadow-[0_0_15px_rgba(168,85,247,0.1)] relative z-10">
+                        <div className="text-xs text-purple-400 mb-2 font-medium flex items-center gap-1">
+                          <LayoutGrid className="w-3 h-3" /> Elementor Grid
+                        </div>
+                        <div className="h-6 bg-slate-700 rounded flex items-center px-2">
+                           <span className="text-[10px] text-slate-200">Dynamic Output</span>
+                        </div>
+                     </div>
+                   </div>
                 </div>
               </div>
             </div>
           )}
           
           {/* Gradient Overlay for bottom fade */}
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-slate-900 to-transparent pointer-events-none"></div>
+          {!settings.heroVideoUrl && (
+            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-slate-900 to-transparent pointer-events-none"></div>
+          )}
         </motion.div>
       </div>
     </section>

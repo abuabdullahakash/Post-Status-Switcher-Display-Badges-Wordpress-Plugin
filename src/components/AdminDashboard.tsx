@@ -12,6 +12,7 @@ import {
 } from 'firebase/auth';
 import { useData } from '../context/DataContext';
 import { Feature, PricingPlan, FAQItem, SiteSettings } from '../types';
+import { DEFAULT_CATEGORIES } from '../lib/defaults';
 import * as Icons from 'lucide-react';
 import ImageUploader from './ImageUploader';
 import jsPDF from 'jspdf';
@@ -51,7 +52,14 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'features' | 'pricing' | 'faq' | 'settings' | 'inquiries'>('dashboard');
-  const [settingsSubTab, setSettingsSubTab] = useState<'identity' | 'hero' | 'marketing' | 'download' | 'smtp' | 'danger'>('identity');
+  const [settingsSubTab, setSettingsSubTab] = useState<'identity' | 'hero' | 'marketing' | 'download' | 'smtp' | 'danger' | 'categories'>('identity');
+  
+  // Custom states for category management
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryId, setNewCategoryId] = useState('');
+  const [newCategoryIcon, setNewCategoryIcon] = useState('Sparkles');
+  const [newCategoryColor, setNewCategoryColor] = useState('text-blue-400');
+
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -90,6 +98,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     useCase: '',
     active: true,
     order: features.length + 1,
+    category: 'general',
     testimonialQuote: '',
     testimonialAuthor: '',
     testimonialRole: '',
@@ -590,6 +599,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
         realWorldCase3Tag: newFeature.realWorldCase3Tag || '',
         realWorldCase3Desc: newFeature.realWorldCase3Desc || '',
         videoUrl: newFeature.videoUrl || '',
+        category: newFeature.category || 'general',
       });
       setIsAddingFeature(false);
       setNewFeature({
@@ -598,6 +608,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
         iconName: 'Sparkles',
         color: 'from-blue-500 to-indigo-500',
         useCase: '',
+        category: 'general',
         active: true,
         order: features.length + 2,
         testimonialQuote: '',
@@ -673,6 +684,86 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
       setTimeout(() => setToast(null), 5000);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) {
+      alert("Please enter a category name");
+      return;
+    }
+    const id = newCategoryId.trim() || newCategoryName.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!id) {
+      alert("Invalid category id generated");
+      return;
+    }
+    const currentCategories = settings.categoriesList || DEFAULT_CATEGORIES;
+    if (currentCategories.some((c: any) => c.id === id)) {
+      alert(`A category with ID "${id}" already exists. Please choose a unique name or ID.`);
+      return;
+    }
+
+    const newCat = {
+      id,
+      name: newCategoryName.trim(),
+      icon: newCategoryIcon.trim() || 'Sparkles',
+      color: newCategoryColor
+    };
+
+    const updatedCategories = [...currentCategories, newCat];
+    try {
+      await updateSettings({
+        ...settings,
+        categoriesList: updatedCategories
+      });
+      setNewCategoryName('');
+      setNewCategoryId('');
+      setNewCategoryIcon('Sparkles');
+      setNewCategoryColor('text-blue-400');
+      setToast({ message: "New category created and updated in database", type: "success" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (err) {
+      setToast({ message: "Failed to update category list", type: "error" });
+      setTimeout(() => setToast(null), 3500);
+    }
+  };
+
+  const handleDeleteCategory = async (catId: string) => {
+    if (catId === 'general') {
+      alert("The general category cannot be deleted as it is the default fallback category.");
+      return;
+    }
+    const currentCategories = settings.categoriesList || DEFAULT_CATEGORIES;
+    const matchesCount = features.filter(f => f.category === catId).length;
+    
+    let confirmMsg = `Are you sure you want to delete the "${catId}" category?`;
+    if (matchesCount > 0) {
+      confirmMsg += `\n\n⚠️ WARNING: There are ${matchesCount} features associated with this category. If you delete it, they will automatically fallback and merge into the generic "General Features" category.`;
+    }
+
+    if (confirm(confirmMsg)) {
+      const updatedCategories = currentCategories.filter((c: any) => c.id !== catId);
+      
+      // Update those features to change their category to general to keep relational integrity
+      const featuresToUpdate = features.filter(f => f.category === catId);
+      for (const feat of featuresToUpdate) {
+        await updateFeature({
+          ...feat,
+          category: 'general'
+        });
+      }
+
+      try {
+        await updateSettings({
+          ...settings,
+          categoriesList: updatedCategories
+        });
+        setToast({ message: "Category deleted and associated features re-routed", type: "success" });
+        setTimeout(() => setToast(null), 3000);
+      } catch (err) {
+        setToast({ message: "Failed to delete category", type: "error" });
+        setTimeout(() => setToast(null), 3000);
+      }
     }
   };
 
@@ -1453,6 +1544,18 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                             ))}
                           </select>
                         </div>
+                        <div>
+                          <label className="block text-xs text-slate-400 mb-1 font-medium">Card Category</label>
+                          <select 
+                            value={editingFeature.category || 'general'}
+                            onChange={(e) => setEditingFeature({ ...editingFeature, category: e.target.value })}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-slate-300 text-sm focus:outline-none focus:border-blue-500 text-white"
+                          >
+                            {(settings.categoriesList || DEFAULT_CATEGORIES).map(cat => (
+                              <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                          </select>
+                        </div>
                         <div className="flex items-center h-full pt-6">
                           <label className="flex items-center gap-3 cursor-pointer">
                             <input 
@@ -1869,7 +1972,19 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                             ))}
                           </select>
                         </div>
-                        <div className="flex items-center h-full pt-6">
+                        <div>
+                          <label className="block text-xs text-slate-400 mb-1 font-medium">Card Category</label>
+                          <select 
+                            value={newFeature.category || 'general'}
+                            onChange={(e) => setNewFeature({ ...newFeature, category: e.target.value })}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-300 text-sm focus:outline-none focus:border-blue-500 text-white"
+                          >
+                            {(settings.categoriesList || DEFAULT_CATEGORIES).map(cat => (
+                              <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex items-center h-full pt-6 flex-wrap">
                           <label className="flex items-center gap-3 cursor-pointer">
                             <input 
                               type="checkbox"
@@ -3155,6 +3270,18 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                       <Icons.AlertCircle className="w-3.5 h-3.5 shrink-0" />
                       Maintenance Center
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettingsSubTab('categories')}
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                        settingsSubTab === 'categories' 
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10 whitespace-nowrap' 
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+                      }`}
+                    >
+                      <Icons.FolderTree className="w-3.5 h-3.5 shrink-0" />
+                      Feature Categories
+                    </button>
                   </div>
 
                   <form onSubmit={handleSaveSettings} className="p-4 sm:p-8 rounded-3xl bg-slate-950/80 space-y-6 sm:space-y-8 shadow-2xl shadow-black/80 backdrop-blur-md border border-slate-900/20">
@@ -3302,6 +3429,72 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                               onChange={(e) => updateSettings({ ...settings, ctaButtonText: e.target.value })}
                               className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500/40 font-medium transition-colors hover:border-slate-800/40"
                             />
+                          </div>
+
+                          <div className="md:col-span-2 border-t border-slate-900 pt-5 mt-2 space-y-4">
+                            <div className="flex items-center gap-2">
+                              <Icons.Video className="w-4 h-4 text-indigo-400" />
+                              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Hero Loop Showcase Video</span>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-xs text-slate-400 mb-1.5 font-medium flex items-center gap-1">
+                                  <span>Showcase Video Direct Link URL</span>
+                                  <div className="group relative">
+                                    <Icons.HelpCircle className="w-3.5 h-3.5 text-slate-500 hover:text-white cursor-help" />
+                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-slate-950 border border-slate-800 text-[11px] text-slate-300 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 leading-relaxed font-sans normal-case">
+                                      Use direct public link terminating in <strong>.mp4</strong> or similar video codec stream (from GitHub, Google Drive, archive.org, etc.)
+                                    </div>
+                                  </div>
+                                </label>
+                                <input 
+                                  type="text"
+                                  value={settings.heroVideoUrl || ""}
+                                  placeholder="e.g. https://archive.org/download/my-plugin/video.mp4"
+                                  onChange={(e) => updateSettings({ ...settings, heroVideoUrl: e.target.value })}
+                                  className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500/40 font-medium transition-colors hover:border-slate-800/40"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs text-slate-400 mb-1.5 font-medium flex items-center gap-1">
+                                  <span>Cover/Poster Image URL (Optional)</span>
+                                </label>
+                                <input 
+                                  type="text"
+                                  value={settings.heroVideoPoster || ""}
+                                  placeholder="photo URL to show while loading"
+                                  onChange={(e) => updateSettings({ ...settings, heroVideoPoster: e.target.value })}
+                                  className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500/40 font-medium transition-colors hover:border-slate-800/40"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Recommendations Help Box */}
+                            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/65 text-xs text-slate-300 space-y-2.5">
+                              <p className="font-bold text-amber-400 flex items-center gap-1.5">
+                                <Icons.Info className="w-4.5 h-4.5" /> Recommended Hosting & Seamless Loop Tips:
+                              </p>
+                              
+                              <ul className="list-disc pl-4 space-y-2 leading-relaxed text-slate-400">
+                                <li>
+                                  <strong className="text-slate-200">How to Upload & Get Direct Link:</strong>
+                                  <ul className="list-decimal pl-4 mt-1 space-y-1 text-slate-400">
+                                    <li><strong>GitHub:</strong> Create or use a repository tracker, drag and drop the `.mp4` into any Markdown comment box (e.g. issue or release draft) and copy the generated link. It is served with high-speed global CDNs!</li>
+                                    <li><strong>Internet Archive (archive.org):</strong> Create a free account or upload. Once processed, use the direct direct download link on the right sidebar (must end in `.mp4`).</li>
+                                    <li><strong>Dropbox / Custom Host:</strong> Copy direct raw link. For Dropbox share links, make sure to change the link suffix from <code>dl=0</code> to <code>raw=1</code> so it streams directly instead of showing a landing page.</li>
+                                  </ul>
+                                </li>
+                                <li>
+                                  <strong className="text-slate-200">Tips for an Invisible "Never-Ending" Seamless Loop:</strong>
+                                  <ul className="list-decimal pl-4 mt-1 space-y-1 text-slate-400">
+                                    <li>Record in a completely static state, keeping your mouse hover position or workflow windows identical at both the start and end seconds.</li>
+                                    <li>Disable audio stream completely in recording settings to keep file downloads ultra lightweight (usually below 1-3MB).</li>
+                                  </ul>
+                                </li>
+                              </ul>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -3595,6 +3788,150 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                               <Icons.RefreshCw className="w-3.5 h-3.5 text-rose-400" />
                               Restore Database Defaults
                             </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {settingsSubTab === 'categories' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                            <Icons.FolderTree className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-white uppercase tracking-wide">Feature Categories Management</h4>
+                            <p className="text-[11px] text-slate-400">Create, edit, or delete the dynamic categorization nodes used to organize features across the frontend.</p>
+                          </div>
+                        </div>
+
+                        {/* Current Categories Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          <div className="space-y-4">
+                            <h5 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Active Dynamic Categories</h5>
+                            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                              {(settings.categoriesList || DEFAULT_CATEGORIES).map((cat) => {
+                                const IconComponent = (Icons as any)[cat.icon] || Icons.Folder;
+                                const featureCount = features.filter(f => f.category === cat.id || (!f.category && cat.id === 'general')).length;
+                                
+                                return (
+                                  <div key={cat.id} className="p-4 rounded-xl bg-slate-900 border border-slate-800/60 flex items-center justify-between gap-3 group hover:border-slate-700 transition-all">
+                                    <div className="flex items-center gap-3">
+                                      <div className={`p-2.5 rounded-lg bg-slate-955 border border-slate-800 ${cat.color || 'text-blue-400'}`}>
+                                        <IconComponent className="w-4 h-4" />
+                                      </div>
+                                      <div>
+                                        <h6 className="text-sm font-semibold text-white">{cat.name}</h6>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                          <span className="text-[10px] font-mono text-slate-500 bg-slate-955 px-1.5 py-0.5 rounded border border-slate-900">ID: {cat.id}</span>
+                                          <span className="text-[10px] text-blue-400 font-medium">{featureCount} active {featureCount === 1 ? 'card' : 'cards'}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {cat.id !== 'general' ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteCategory(cat.id)}
+                                        className="p-2 rounded-lg bg-rose-950/20 text-rose-400 hover:bg-rose-900 hover:text-white transition-all cursor-pointer opacity-80 group-hover:opacity-100"
+                                        title="Delete Category"
+                                      >
+                                        <Icons.Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    ) : (
+                                      <span className="text-[10px] text-slate-600 uppercase font-bold tracking-wider px-2 py-1 bg-slate-950 border border-slate-900 rounded-lg">System Default</span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Add New Category Card */}
+                          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80 space-y-4 h-fit">
+                            <h5 className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                              <Icons.Plus className="w-4 h-4 text-emerald-400" />
+                              Add New Category Node
+                            </h5>
+                            
+                            <div className="space-y-3">
+                              <div>
+                                <label className="block text-[10px] text-slate-400 mb-1 font-medium">Category Name</label>
+                                <input 
+                                  type="text"
+                                  value={newCategoryName}
+                                  onChange={(e) => {
+                                    setNewCategoryName(e.target.value);
+                                    setNewCategoryId(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''));
+                                  }}
+                                  className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                                  placeholder="e.g., Woocommerce Extras"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] text-slate-400 mb-1 font-medium">Unique Node ID (Lowercase, Alphanumeric)</label>
+                                <input 
+                                  type="text"
+                                  value={newCategoryId}
+                                  onChange={(e) => setNewCategoryId(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
+                                  className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500 font-mono"
+                                  placeholder="e.g., woocommerce"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] text-slate-400 mb-1 font-medium">Tailwind Color Accent Class</label>
+                                <select 
+                                  value={newCategoryColor}
+                                  onChange={(e) => setNewCategoryColor(e.target.value)}
+                                  className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                                >
+                                  <option value="text-blue-400">text-blue-400 (Blue Accent)</option>
+                                  <option value="text-pink-400">text-pink-400 (Pink Accent)</option>
+                                  <option value="text-indigo-400">text-indigo-400 (Indigo Accent)</option>
+                                  <option value="text-emerald-400">text-emerald-400 (Emerald Accent)</option>
+                                  <option value="text-amber-400">text-amber-400 (Amber Accent)</option>
+                                  <option value="text-red-400">text-red-400 (Red Accent)</option>
+                                  <option value="text-purple-400">text-purple-400 (Purple Accent)</option>
+                                  <option value="text-teal-400">text-teal-400 (Teal Accent)</option>
+                                  <option value="text-sky-400">text-sky-400 (Sky Accent)</option>
+                                  <option value="text-rose-400">text-rose-400 (Rose Accent)</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <div className="flex justify-between items-center mb-1">
+                                  <label className="block text-[10px] text-slate-400 font-medium">Lucide Vector Icon Name</label>
+                                  <a 
+                                    href="https://lucide.dev/icons" 
+                                    target="_blank" 
+                                    rel="noreferrer noopener"
+                                    className="text-[10px] text-blue-400 hover:underline flex items-center gap-1"
+                                  >
+                                    <Icons.Globe className="w-3 h-3" />
+                                    Find Icons Platform
+                                  </a>
+                                </div>
+                                <input 
+                                  type="text"
+                                  value={newCategoryIcon}
+                                  onChange={(e) => setNewCategoryIcon(e.target.value)}
+                                  className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
+                                  placeholder="e.g., ShoppingCart, Star, Zap"
+                                />
+                                <span className="text-[9px] text-slate-500 mt-0.5 block">Type any standard PascalCase Lucide icon name (e.g. Columns, ShoppingCart, Key, Layers)</span>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={handleAddCategory}
+                                className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10"
+                              >
+                                <Icons.Plus className="w-3.5 h-3.5" />
+                                Save & Broadcast Category Node
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>

@@ -36,6 +36,7 @@ export interface Feature {
   // Pending moderation details
   pendingApproval?: 'create' | 'update' | null;
   pendingUpdateData?: Partial<Feature> | null;
+  category?: string;
 }
 
 export interface PricingPlan {
@@ -81,6 +82,9 @@ export interface SiteSettings {
   pricingSectionTitle?: string;
   pricingSectionSubtitle?: string;
   footerCopyrightText?: string;
+  heroVideoUrl?: string;
+  heroVideoPoster?: string;
+  categoriesList?: { id: string; name: string; icon: string; color?: string }[];
 
   // SMTP & Mail Settings
   smtpEmail?: string;

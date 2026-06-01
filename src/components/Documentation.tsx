@@ -5,18 +5,18 @@ import { Settings, Database, Paintbrush, Eye } from 'lucide-react';
 const steps = [
   {
     id: 'step-1',
-    title: 'Feature Enabling',
+    title: 'Visual Query Initialization',
     icon: Settings,
-    description: 'Toggle features globally in the settings panel.',
+    description: 'Activate the visual canvas in JetEngine settings.',
     content: (
       <div className="space-y-4">
         <p className="text-slate-300 leading-relaxed">
-          Navigate to your WordPress dashboard. Under the JetEngine menu, locate the <strong className="text-white">Status Switcher</strong> sub-menu. Here you can enable or disable the core modules specific to your project's needs.
+          Navigate to your WordPress dashboard. Under the JetEngine menu, locate the <strong className="text-white">Visual Query Builder</strong> sub-menu. Enable the visual canvas to override the default backend array constructor.
         </p>
         <div className="rounded-lg bg-slate-950 border border-slate-800 p-4 font-mono text-sm text-slate-400 overflow-x-auto">
           <span className="text-blue-400">1.</span> Go to Dashboard &gt; JetEngine<br/>
-          <span className="text-blue-400">2.</span> Click "Status Switcher & Badges"<br/>
-          <span className="text-blue-400">3.</span> Toggle "Enable Frontend Switching" to <span className="text-emerald-400">ON</span>
+          <span className="text-blue-400">2.</span> Click "Visual Query Canvas"<br/>
+          <span className="text-blue-400">3.</span> Toggle "Enable Node Editor" to <span className="text-emerald-400">ON</span>
         </div>
       </div>
     )
@@ -25,22 +25,22 @@ const steps = [
     id: 'step-2',
     title: 'Post Type Assignment',
     icon: Database,
-    description: 'Select specific Custom Post Types to control.',
+    description: 'Select target Post Types and WooCommerce Products.',
     content: (
       <div className="space-y-4">
         <p className="text-slate-300 leading-relaxed">
-          Not all post types need status switching. Easily assign the toggling capabilities only to the Custom Post Types (CPTs) or Products that require it.
+          Determine which data objects the query builder can interact with. Assign capabilities to WooCommerce Products, default posts, or JetEngine CPTs.
         </p>
         <div className="rounded-lg bg-slate-800/50 border border-slate-700 p-4 sm:p-6 flex items-center justify-center">
           <div className="w-full max-w-sm space-y-3">
             <div className="flex items-center justify-between p-3 rounded bg-slate-900 border border-slate-700 gap-2">
-              <span className="text-xs sm:text-sm font-medium">Properties (CPT)</span>
+              <span className="text-xs sm:text-sm font-medium">WooCommerce Products</span>
               <div className="w-10 h-5 bg-blue-500 rounded-full flex items-center px-1 justify-end shrink-0">
                 <div className="w-3 h-3 bg-white rounded-full"></div>
               </div>
             </div>
             <div className="flex items-center justify-between p-3 rounded bg-slate-900 border border-slate-700 gap-2">
-              <span className="text-xs sm:text-sm font-medium">Job Applications (CPT)</span>
+              <span className="text-xs sm:text-sm font-medium">Custom CPTs (e.g. Properties)</span>
               <div className="w-10 h-5 bg-blue-500 rounded-full flex items-center px-1 justify-end shrink-0">
                 <div className="w-3 h-3 bg-white rounded-full"></div>
               </div>
@@ -52,22 +52,22 @@ const steps = [
   },
   {
     id: 'step-3',
-    title: 'Elementor Integration',
+    title: 'Elementor Pro Loop Grid',
     icon: Paintbrush,
-    description: 'Use custom Dynamic Tags for brilliant visual display.',
+    description: 'Inject visual queries straight into Elementor Loop Grids.',
     content: (
       <div className="space-y-4">
         <p className="text-slate-300 leading-relaxed">
-          Drag and drop standard Elementor widgets and populate them dynamically. Use the custom <strong>"JESS Feature Badge"</strong> and <strong>"JESS Status Expiration Timer"</strong> tags.
+          Forget writing PHP or JSON arrays for complex filtering. Pass the unique ID of your Visual Node Query to the standard <strong>Elementor Pro Loop Grid</strong> or JetEngine Listing Grid.
         </p>
         <div className="rounded-lg bg-slate-950 border border-slate-800 p-3 sm:p-4 font-mono text-sm flex flex-col gap-2">
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded text-[10px] sm:text-xs">Dynamic Tag</span>
-            <span className="text-slate-400 text-xs sm:text-sm break-all">&rarr; JESS Feature Badge</span>
+            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded text-[10px] sm:text-xs">Query Source</span>
+            <span className="text-slate-400 text-xs sm:text-sm break-all">&rarr; Select "JetEngine Visual Query"</span>
           </div>
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded text-[10px] sm:text-xs">Dynamic Tag</span>
-            <span className="text-slate-400 text-xs sm:text-sm break-all">&rarr; JESS Expiration Timer</span>
+            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded text-[10px] sm:text-xs">Query ID</span>
+            <span className="text-slate-400 text-xs sm:text-sm break-all">&rarr; vqb-dynamic-filter-01</span>
           </div>
         </div>
       </div>
@@ -75,18 +75,18 @@ const steps = [
   },
   {
     id: 'step-4',
-    title: 'Dynamic Visibility',
+    title: 'Real-time UI Adaptation',
     icon: Eye,
-    description: 'Hide/show Elementor sections based on current status.',
+    description: 'Auto-update layout arrays without refreshing the page.',
     content: (
       <div className="space-y-4">
         <p className="text-slate-300 leading-relaxed">
-          Enhance layout logic by integrating deeply with JetEngine Dynamic Visibility. Hide "Apply Now" buttons when the job status shifts to "Closed".
+          Queries update automatically based on URL parameters or JetSmartFilters. Combined with dynamic visibility rules, your grids become completely interactive and state-aware.
         </p>
         <ul className="space-y-2 text-slate-300 text-sm">
-           <li className="flex gap-2 items-center"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>Condition: Show if Status is equal to</li>
-           <li className="flex gap-2 items-center"><div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>Value: "Open"</li>
-           <li className="flex gap-2 items-center"><div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>Result: Layout adapts automatically without reload.</li>
+           <li className="flex gap-2 items-center"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>Smart Condition: Hide Element if</li>
+           <li className="flex gap-2 items-center"><div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>Visual Output: Empty / No Matches</li>
+           <li className="flex gap-2 items-center"><div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>Result: Hides the loop grid seamlessly.</li>
         </ul>
       </div>
     )

@@ -9,11 +9,13 @@ import Contact from './components/Contact';
 import Footer from './components/Footer';
 import AdminDashboard from './components/AdminDashboard';
 import SingleFeaturePage from './components/SingleFeaturePage';
+import AllFeaturesPage from './components/AllFeaturesPage';
 import { DataProvider } from './context/DataContext';
 
 export default function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
+  const [isAllFeaturesOpen, setIsAllFeaturesOpen] = useState(false);
 
   useEffect(() => {
     const checkRouteState = () => {
@@ -23,13 +25,20 @@ export default function App() {
       if (params.get('admin') === 'true' || hash === '#admin') {
         setIsAdminOpen(true);
         setSelectedFeatureId(null);
+        setIsAllFeaturesOpen(false);
       } else if (hash.startsWith('#feature/')) {
         const featId = hash.slice(9);
         setSelectedFeatureId(featId);
         setIsAdminOpen(false);
+        setIsAllFeaturesOpen(false);
+      } else if (hash === '#all-features') {
+        setIsAllFeaturesOpen(true);
+        setIsAdminOpen(false);
+        setSelectedFeatureId(null);
       } else {
         setIsAdminOpen(false);
         setSelectedFeatureId(null);
+        setIsAllFeaturesOpen(false);
       }
     };
 
@@ -43,6 +52,7 @@ export default function App() {
     window.location.hash = 'admin';
     setIsAdminOpen(true);
     setSelectedFeatureId(null);
+    setIsAllFeaturesOpen(false);
   };
 
   const handleCloseAdmin = () => {
@@ -58,9 +68,15 @@ export default function App() {
     setSelectedFeatureId(null);
   };
 
+  const handleCloseAllFeatures = () => {
+    window.location.hash = '';
+    setIsAllFeaturesOpen(false);
+  };
+
   const handleNavigateToFeature = (id: string) => {
     window.location.hash = `feature/${id}`;
     setSelectedFeatureId(id);
+    setIsAllFeaturesOpen(false);
   };
 
   return (
@@ -76,6 +92,11 @@ export default function App() {
                 featureId={selectedFeatureId} 
                 onBack={handleCloseFeature} 
                 onNavigateToFeature={handleNavigateToFeature} 
+              />
+            ) : isAllFeaturesOpen ? (
+              <AllFeaturesPage 
+                onBack={handleCloseAllFeatures}
+                onNavigateToFeature={handleNavigateToFeature}
               />
             ) : (
               <>
