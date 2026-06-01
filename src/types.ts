@@ -92,4 +92,6 @@ export interface SiteSettings {
   adminNotificationEmail?: string;
   autoReplySubject?: string;
   autoReplyTemplate?: string;
+  customAutoReplySubject?: string;
+  customAutoReplyTemplate?: string;
 }

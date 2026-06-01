@@ -367,5 +367,9 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   footerCopyrightText: 'PostStatus Switcher. Developed inside secure Cloud Workspace.',
   heroVideoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-spinning-glowing-globe-of-data-connections-42289-large.mp4',
   heroVideoPoster: '',
-  categoriesList: DEFAULT_CATEGORIES
+  categoriesList: DEFAULT_CATEGORIES,
+  autoReplySubject: 'We have received your support ticket! (Ticket #{ticketID})',
+  autoReplyTemplate: 'Hello {name},\n\nThank you for reaching out to us! We have successfully received your support inquiry.\n\nSubject: {subject}\n\nOur team is reviewing your message and will respond to you shortly at {email}.\n\nTicket ID: #{ticketID}\n\nBest regards,\nThe {siteName} Team',
+  customAutoReplySubject: '[Module Proposal Registered] Your request for "{moduleTitle}" is serialized!',
+  customAutoReplyTemplate: 'Hello {name},\n\nThank you for submitting a custom feature module proposal! We have successfully registered your interest.\n\nProposed Module: {moduleTitle}\nTarget Category: {moduleCategory}\n\nWorkflow Description:\n{moduleDesc}\n\nOur engineering team has received the specifications of the status switcher workflow you described. We will analyze the implementation and contact you shortly at {email} with a development update.\n\nBest regards,\nThe {siteName} Team'
 };

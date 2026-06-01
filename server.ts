@@ -238,7 +238,24 @@ app.get("/api/health", (req, res) => {
 
   // API Route - Direct Support & Contact form dispatch (Stores to Firestore & sends real-time SMTP emails)
   app.post("/api/contact", async (req, res) => {
-    const { name, email, subject, message, websiteVerification, faxNumberInput, numA, numB, userAnswer } = req.body;
+    const { 
+      name, 
+      email, 
+      subject, 
+      message, 
+      websiteVerification, 
+      faxNumberInput, 
+      numA, 
+      numB, 
+      userAnswer,
+      inquiryType,
+      moduleTitle,
+      moduleCategory,
+      moduleDesc 
+    } = req.body;
+
+    const isCustomModule = inquiryType === "custom_module";
+    const activeMessage = isCustomModule ? (moduleDesc || message) : message;
 
     // 1. IP Rate Limiting (Memory-based)
     const clientIp = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown-ip") as string;
@@ -260,10 +277,12 @@ app.get("/api/health", (req, res) => {
     ipRateLimits.set(clientIp, clientSubmissions);
 
     // 2. Validation Checks
-    if (!name || !email || !message) {
+    if (!name || !email || !activeMessage) {
       return res.status(400).json({
         error: "Bad Request",
-        message: "Missing required contact fields: 'name', 'email', and 'message' are mandatory."
+        message: isCustomModule 
+          ? "Missing required fields: please enter your Name, Email, and Module Description." 
+          : "Missing required contact fields: 'name', 'email', and 'message' are mandatory."
       });
     }
 
@@ -274,27 +293,31 @@ app.get("/api/health", (req, res) => {
       });
     }
 
-    if (message.trim().length < 15) {
+    if (activeMessage.trim().length < 15) {
       return res.status(400).json({
         error: "Bad Request",
-        message: "Your message detail is too short. Please write at least 15 characters to explain your request."
+        message: isCustomModule
+          ? "Your module description is too short. Please write at least 15 characters to explain your requirements."
+          : "Your message detail is too short. Please write at least 15 characters to explain your request."
       });
     }
 
-    // 3. Math Captcha Verification
-    if (numA === undefined || numB === undefined || userAnswer === undefined) {
-      return res.status(400).json({
-        error: "Bad Request",
-        message: "Missing security captcha verification code. Please complete the security equation field."
-      });
-    }
+    // 3. Math Captcha Verification (Skip for custom module proposals for smoother user experience)
+    if (!isCustomModule) {
+      if (numA === undefined || numB === undefined || userAnswer === undefined) {
+        return res.status(400).json({
+          error: "Bad Request",
+          message: "Missing security captcha verification code. Please complete the security equation field."
+        });
+      }
 
-    const expectedAnswer = Number(numA) + Number(numB);
-    if (Number(userAnswer) !== expectedAnswer) {
-      return res.status(400).json({
-        error: "Captcha Verification Failed",
-        message: "Incorrect math security captcha answer. Please solve the dynamic puzzle again."
-      });
+      const expectedAnswer = Number(numA) + Number(numB);
+      if (Number(userAnswer) !== expectedAnswer) {
+        return res.status(400).json({
+          error: "Captcha Verification Failed",
+          message: "Incorrect math security captcha answer. Please solve the dynamic puzzle again."
+        });
+      }
     }
 
     // 4. Honeypot check (Silent Bypass)
@@ -311,7 +334,7 @@ app.get("/api/health", (req, res) => {
     // 5. Keyword Spam Analyzer & Excessive links checking (Silent Bypass)
     let isKeywordSpam = false;
     const spamKeywords = ["poker", "casino", "viagra", "crypto invest", "seo rank", "maximize leads", "increase traffic", "forex trade", "passive income", "earn money from home", "betting site"];
-    const lowercaseMessage = message.toLowerCase();
+    const lowercaseMessage = activeMessage.toLowerCase();
     
     for (const kw of spamKeywords) {
       if (lowercaseMessage.includes(kw)) {
@@ -321,7 +344,7 @@ app.get("/api/health", (req, res) => {
     }
 
     const urlPattern = /https?:\/\/[^\s]+/g;
-    const urlsCount = (message.match(urlPattern) || []).length;
+    const urlsCount = (activeMessage.match(urlPattern) || []).length;
     if (urlsCount > 1 || isKeywordSpam) {
       console.warn(`[SPAM PREVENTION] Message flagged as Spam (URLs count: ${urlsCount}, keyword spam: ${isKeywordSpam}). Silent bypass applied.`);
       return res.status(201).json({
@@ -334,16 +357,25 @@ app.get("/api/health", (req, res) => {
 
     // Legitimate non-spam message - process and save to firesore & dispatch notifier email
     const contactId = `contact-${Date.now()}`;
-    const contactDoc = {
+    const contactDoc: any = {
       id: contactId,
       name,
       email,
-      subject: subject || "Technical Inquiry",
-      message,
+      subject: isCustomModule ? `[Module Proposal] ${moduleTitle}` : (subject || "Technical Inquiry"),
+      message: activeMessage,
       createdAt: new Date().toISOString(),
+      inquiryType: inquiryType || "contact",
+      status: "new",
+      isFavorite: false,
       // Add server-side secret validation token to pass security rules checks
       serverDispatchSecret: "PostStatusServerBypassToken2026"
     };
+
+    if (isCustomModule) {
+      contactDoc.moduleTitle = moduleTitle || "";
+      contactDoc.moduleCategory = moduleCategory || "";
+      contactDoc.moduleDesc = moduleDesc || "";
+    }
 
     try {
       // 1. Save entry to Firestore database for persistent admin records
@@ -391,18 +423,29 @@ app.get("/api/health", (req, res) => {
             from: `"${name} via Support Form" <${smtpUser}>`,
             to: adminEmailConfigured,
             replyTo: email,
-            subject: `[Support Ticket] ${subject || "New Inquiry"} - ${name}`,
-            text: `New support dispatch received from contact form:\n\n` +
-                  `Sender: ${name} (${email})\n` +
-                  `Subject: ${subject}\n\n` +
-                  `Message:\n${message}\n\n` +
-                  `--- System Notification ---\n` +
-                  `This email was dispatched from your PostStatus Admin dashboard contact page.\n` +
-                  `Database ID: ${contactId}`,
+            subject: isCustomModule 
+              ? `[Module Proposal] ${moduleTitle || "New Custom Module"} - ${name}` 
+              : `[Support Ticket] ${subject || "New Inquiry"} - ${name}`,
+            text: isCustomModule
+              ? `New custom module proposal received from website:\n\n` +
+                `Proposed By: ${name} (${email})\n` +
+                `Module Name: ${moduleTitle}\n` +
+                `Category Node: ${moduleCategory}\n\n` +
+                `Workflow Description:\n${moduleDesc || activeMessage}\n\n` +
+                `--- System Notification ---\n` +
+                `This email was dispatched from your PostStatus Admin dashboard contact page.\n` +
+                `Database ID: ${contactId}`
+              : `New support dispatch received from contact form:\n\n` +
+                `Sender: ${name} (${email})\n` +
+                `Subject: ${subject}\n\n` +
+                `Message:\n${message}\n\n` +
+                `--- System Notification ---\n` +
+                `This email was dispatched from your PostStatus Admin dashboard contact page.\n` +
+                `Database ID: ${contactId}`,
             html: `
               <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #fafafa;">
-                <div style="border-bottom: 2px solid #3b82f6; padding-bottom: 15px; margin-bottom: 20px;">
-                  <h2 style="color: #1e293b; margin: 0; font-size: 22px;">New Contact Form Dispatch</h2>
+                <div style="border-bottom: 2px solid ${isCustomModule ? '#ec4899' : '#3b82f6'}; padding-bottom: 15px; margin-bottom: 20px;">
+                  <h2 style="color: #1e293b; margin: 0; font-size: 22px;">${isCustomModule ? 'New Custom Module Proposal' : 'New Contact Form Dispatch'}</h2>
                   <p style="color: #64748b; margin: 5px 0 0 0; font-size: 14px;">Inquiry tracked under Ticket ID: <strong>#${contactId}</strong></p>
                 </div>
                 
@@ -416,17 +459,21 @@ app.get("/api/health", (req, res) => {
                     <td style="padding: 8px 0; color: #0f172a;"><a href="mailto:${email}" style="color: #3b82f6; text-decoration: none;">${email}</a></td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0; color: #475569; font-weight: bold;">Subject Category:</td>
-                    <td style="padding: 8px 0; color: #0f172a;"><span style="background-color: #eff6ff; color: #1e40af; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;">${subject}</span></td>
+                    <td style="padding: 8px 0; color: #475569; font-weight: bold;">Category:</td>
+                    <td style="padding: 8px 0; color: #0f172a;">
+                      <span style="background-color: ${isCustomModule ? '#fdf2f8' : '#eff6ff'}; color: ${isCustomModule ? '#9d174d' : '#1e40af'}; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;">
+                        ${isCustomModule ? `Custom Module: ${moduleCategory}` : subject}
+                      </span>
+                    </td>
                   </tr>
                 </table>
 
                 <div style="background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
-                  <h4 style="color: #475569; margin: 0 0 10px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em;">Message Body</h4>
-                  <p style="color: #334155; line-height: 1.6; margin: 0; white-space: pre-wrap; font-size: 14px;">${message}</p>
+                  <h4 style="color: #475569; margin: 0 0 10px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em;">${isCustomModule ? `Workflow Specifications` : 'Message Body'}</h4>
+                  <p style="color: #334155; line-height: 1.6; margin: 0; white-space: pre-wrap; font-size: 14px;">${isCustomModule ? (moduleDesc || activeMessage) : message}</p>
                 </div>
 
-                <div style="border-t: 1px solid #e2e8f0; padding-top: 15px; text-align: center;">
+                <div style="border-top: 1px solid #e2e8f0; padding-top: 15px; text-align: center;">
                   <p style="font-size: 11px; color: #94a3b8; margin: 0;">This email was sent dynamically via PostStatus Plugin's integrated Node.js platform.</p>
                 </div>
               </div>
@@ -438,13 +485,46 @@ app.get("/api/health", (req, res) => {
           console.log(`[SMTP SUCCESS] Admin mail delivered to "${adminEmailConfigured}" from "${email}"`);
 
           // B. Send Auto-Reply to Customer
-          if (smtpSettings.autoReplyTemplate) {
-            let replySubject = smtpSettings.autoReplySubject || "Thank you for contacting us!";
-            replySubject = replySubject.replace("{ticketID}", contactId);
+          let autoReplyTemplateSelected = isCustomModule 
+            ? (smtpSettings.customAutoReplyTemplate || "") 
+            : (smtpSettings.autoReplyTemplate || "");
+          let autoReplySubjectSelected = isCustomModule 
+            ? (smtpSettings.customAutoReplySubject || "") 
+            : (smtpSettings.autoReplySubject || "");
 
-            let replyBody = smtpSettings.autoReplyTemplate
+          // Robust Fallbacks if not set in UI or empty
+          if (!autoReplyTemplateSelected) {
+            if (isCustomModule) {
+              autoReplyTemplateSelected = "Hello {name},\n\nThank you for submitting a custom feature module proposal! We have successfully registered your interest.\n\nProposed Module: {moduleTitle}\nTarget Category: {moduleCategory}\n\nWorkflow Description:\n{moduleDesc}\n\nOur engineering team has received the specifications of the status switcher workflow you described. We will analyze the implementation and contact you shortly at {email} with a development update.\n\nBest regards,\nThe {siteName} Team";
+              if (!autoReplySubjectSelected) {
+                autoReplySubjectSelected = "[Module Proposal Registered] Your request for \"{moduleTitle}\" is serialized!";
+              }
+            } else {
+              autoReplyTemplateSelected = "Hello {name},\n\nThank you for reaching out to us! We have successfully received your support inquiry.\n\nSubject: {subject}\n\nOur team is reviewing your message and will respond to you shortly at {email}.\n\nTicket ID: #{ticketID}\n\nBest regards,\nThe {siteName} Team";
+              if (!autoReplySubjectSelected) {
+                autoReplySubjectSelected = "We have received your support ticket! (Ticket #{ticketID})";
+              }
+            }
+          }
+
+          if (autoReplyTemplateSelected) {
+            let replySubject = autoReplySubjectSelected || (isCustomModule ? "Thank you for your proposal!" : "Thank you for contacting us!");
+            replySubject = replySubject
+              .replace(/{ticketID}/g, contactId)
+              .replace(/{moduleTitle}/g, moduleTitle || "")
+              .replace(/{moduleCategory}/g, moduleCategory || "")
+              .replace(/{subject}/g, subject || "Technical Inquiry")
+              .replace(/{name}/g, name);
+
+            let replyBody = autoReplyTemplateSelected
               .replace(/{name}/g, name)
-              .replace(/{email}/g, email);
+              .replace(/{email}/g, email)
+              .replace(/{ticketID}/g, contactId)
+              .replace(/{subject}/g, subject || "Technical Inquiry")
+              .replace(/{moduleTitle}/g, moduleTitle || "")
+              .replace(/{moduleCategory}/g, moduleCategory || "")
+              .replace(/{moduleDesc}/g, activeMessage)
+              .replace(/{siteName}/g, smtpSettings.siteName || "PostStatus");
             
             // Format HTML safely, convert line breaks so it formats properly in email
             const formattedReplyBodyHtml = replyBody.replace(/\n/g, '<br/>');
@@ -462,7 +542,7 @@ app.get("/api/health", (req, res) => {
             };
             
             await transporter.sendMail(customerMailOptions);
-             console.log(`[SMTP SUCCESS] Auto-reply delivered to customer "${email}"`);
+            console.log(`[SMTP SUCCESS] Auto-reply delivered to customer "${email}"`);
           }
 
         } catch (mailErr: any) {
@@ -474,8 +554,8 @@ app.get("/api/health", (req, res) => {
         console.warn(`[SMTP NOTIFICATION MOCK] Send contact notification mockup:`);
         console.warn(`\tTo: ${adminEmailConfigured}`);
         console.warn(`\tFrom: ${email}`);
-        console.warn(`\tSubject: ${subject}`);
-        console.warn(`\tBody: ${message}`);
+        console.warn(`\tSubject: ${isCustomModule ? `[Module Proposal] ${moduleTitle}` : subject}`);
+        console.warn(`\tBody: ${isCustomModule ? `Module: ${moduleTitle}\nCategory: ${moduleCategory}\nDescription: ${activeMessage}` : message}`);
         console.warn(`[REASON] No active SMTP valid credentials configured in Database Settings (or .env).`);
       }
 
@@ -487,15 +567,15 @@ app.get("/api/health", (req, res) => {
         ...(emailError && { smtpError: emailError })
       });
 
-  } catch (dbErr: any) {
-    console.error("Database Contact Entry Failure:", dbErr);
-    return res.status(500).json({
-      error: "Internal Server Error",
-      message: "Could not record contact dispatch transaction in Firestore database.",
-      details: dbErr.message
-    });
-  }
-});
+    } catch (dbErr: any) {
+      console.error("Database Contact Entry Failure:", dbErr);
+      return res.status(500).json({
+        error: "Internal Server Error",
+        message: "Could not record contact dispatch transaction in Firestore database.",
+        details: dbErr.message
+      });
+    }
+  });
 
 // Standalone Server Initialization (Used locally and in standard Docker/Node environments)
 // In Vercel serverless environments, VERCEL=1 is set automatically, and it uses the exported app handler instead.

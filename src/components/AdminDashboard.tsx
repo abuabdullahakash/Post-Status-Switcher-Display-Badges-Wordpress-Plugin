@@ -67,6 +67,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [featureSearchQuery, setFeatureSearchQuery] = useState('');
   const [inquirySearchQuery, setInquirySearchQuery] = useState('');
   const [inquiryFilterStatus, setInquiryFilterStatus] = useState<'all' | 'new' | 'read' | 'replied'>('all');
+  const [inquiryTypeFilter, setInquiryTypeFilter] = useState<'all' | 'contact' | 'custom_module'>('all');
   const [inquiriesCurrentPage, setInquiriesCurrentPage] = useState(1);
   const INQUIRIES_PER_PAGE = 10;
   const [contacts, setContacts] = useState<any[]>([]);
@@ -126,6 +127,9 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const filteredInquiries = contacts.filter(c => {
     if (inquiryFilterStatus === 'all') return c.status !== 'deleted';
     return c.status === inquiryFilterStatus;
+  }).filter(c => {
+    if (inquiryTypeFilter === 'all') return true;
+    return (c.inquiryType || 'contact') === inquiryTypeFilter;
   }).filter(c => 
     (c.id || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
     (c.name || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
@@ -283,6 +287,10 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
           message: data.message || "",
           subject: data.subject || "",
           status: data.status || "new",
+          inquiryType: data.inquiryType || "contact",
+          moduleTitle: data.moduleTitle || "",
+          moduleCategory: data.moduleCategory || "",
+          moduleDesc: data.moduleDesc || "",
           createdAt: data.createdAt || new Date().toISOString()
         };
       }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -382,6 +390,9 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     const contactsToExport = contacts.filter(c => {
       if (inquiryFilterStatus === 'all') return c.status !== 'deleted';
       return c.status === inquiryFilterStatus;
+    }).filter(c => {
+      if (inquiryTypeFilter === 'all') return true;
+      return (c.inquiryType || 'contact') === inquiryTypeFilter;
     }).filter(c => 
       (c.id || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
       (c.name || '').toLowerCase().includes(inquirySearchQuery.toLowerCase()) || 
@@ -2920,14 +2931,53 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
               )}
 
               {/* INQUIRIES TAB */}
-              {activeTab === 'inquiries' && (
-                 <div className="space-y-6">
-                   <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                     <div>
-                       <h3 className="text-xl font-display font-bold text-white">Contact Form Inquiries</h3>
-                       <p className="text-sm text-slate-400">Manage and view messages submitted by visitors.</p>
-                     </div>
-                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto">
+               {activeTab === 'inquiries' && (
+                  <div className="space-y-6">
+                    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                      <div>
+                        <h3 className="text-xl font-display font-bold text-white">Contact Form Inquiries</h3>
+                        <p className="text-sm text-slate-400">Manage and view messages submitted by visitors.</p>
+                      </div>
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto">
+                        {/* Dynamic Segment Buttons with dynamic AJAX fetch refresh triggers */}
+                        <div className="flex bg-slate-900/60 p-1 border border-slate-800 rounded-xl shrink-0 gap-1 overflow-x-auto">
+                          <button
+                            type="button"
+                            onClick={() => { setInquiryTypeFilter('all'); fetchContacts(); }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                              inquiryTypeFilter === 'all' 
+                                ? 'bg-blue-600/20 border border-blue-500/20 text-blue-400 font-bold' 
+                                : 'text-slate-400 hover:text-white border border-transparent'
+                            }`}
+                          >
+                            All
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setInquiryTypeFilter('contact'); fetchContacts(); }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
+                              inquiryTypeFilter === 'contact' 
+                                ? 'bg-indigo-600/20 border border-indigo-500/20 text-indigo-400 font-bold' 
+                                : 'text-slate-400 hover:text-white border border-transparent'
+                            }`}
+                          >
+                            <Icons.Mail className="w-3.5 h-3.5" />
+                            General Mail
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setInquiryTypeFilter('custom_module'); fetchContacts(); }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
+                              inquiryTypeFilter === 'custom_module' 
+                                ? 'bg-pink-600/20 border border-pink-500/20 text-pink-400 font-bold' 
+                                : 'text-slate-400 hover:text-white border border-transparent'
+                            }`}
+                            title="Show Custom Module Requests with AJAX reload"
+                          >
+                            <Icons.Sparkles className="w-3.5 h-3.5" />
+                            Proposals Only
+                          </button>
+                        </div>
                         <div className="flex gap-2 w-full sm:w-auto flex-1 sm:flex-none">
                           <select 
                             value={inquiryFilterStatus}
@@ -3067,7 +3117,14 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                                   <div className="text-xs text-slate-400">{contact.email}</div>
                                 </td>
                                 <td className="p-4 text-slate-300">
-                                  <div className="font-medium">{contact.subject}</div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{contact.subject}</span>
+                                    {contact.inquiryType === 'custom_module' && (
+                                      <span className="px-1.5 py-0.5 rounded bg-pink-500/10 border border-pink-500/20 text-[9px] font-mono font-bold text-pink-400 shrink-0">
+                                        PROPOSAL
+                                      </span>
+                                    )}
+                                  </div>
                                   <div className="text-xs text-slate-500 truncate max-w-[200px]">{contact.message}</div>
                                 </td>
                                 <td className="p-4">
@@ -4525,6 +4582,19 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                     </div>
                   </div>
                 </div>
+
+                {selectedInquiry.inquiryType === 'custom_module' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-pink-500/5 rounded-xl border border-pink-500/10">
+                      <span className="text-[10px] uppercase font-bold text-pink-400 tracking-wider mb-1 block">Proposed Module Title</span>
+                      <div className="font-semibold text-white">{selectedInquiry.moduleTitle || 'N/A'}</div>
+                    </div>
+                    <div className="p-4 bg-pink-500/5 rounded-xl border border-pink-500/10">
+                      <span className="text-[10px] uppercase font-bold text-pink-400 tracking-wider mb-1 block">Target Category Node</span>
+                      <div className="font-semibold text-white">{selectedInquiry.moduleCategory || 'N/A'}</div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="p-5 bg-slate-950/80 rounded-2xl border border-slate-850 space-y-3">
                   <div>

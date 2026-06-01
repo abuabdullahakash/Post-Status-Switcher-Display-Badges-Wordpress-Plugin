@@ -17,9 +17,13 @@ export default function AllFeaturesPage({ onBack, onNavigateToFeature }: AllFeat
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
 
   // Feature request form state
+  const [requestName, setRequestName] = useState('');
+  const [requestEmail, setRequestEmail] = useState('');
+  const [isSubmittingProposal, setIsSubmittingProposal] = useState(false);
+  const [proposalError, setProposalError] = useState<string | null>(null);
   const [requestTitle, setRequestTitle] = useState('');
   const [requestDesc, setRequestDesc] = useState('');
-  const [requestCat, setRequestCat] = useState('automation');
+  const [requestCat, setRequestCat] = useState('custom');
   const [requestSubmitted, setRequestSubmitted] = useState(false);
   const [userRequests, setUserRequests] = useState<{title: string, desc: string, cat: string}[]>(() => {
     try {
@@ -100,28 +104,71 @@ export default function AllFeaturesPage({ onBack, onNavigateToFeature }: AllFeat
       .sort((a, b) => a.order - b.order);
   }, [features, selectedCategory, searchQuery]);
 
-  const handleRequestSubmit = (e: React.FormEvent) => {
+  const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!requestTitle.trim() || !requestDesc.trim()) return;
-
-    const newRequest = {
-      title: requestTitle,
-      desc: requestDesc,
-      cat: requestCat
-    };
-
-    const nextRequests = [newRequest, ...userRequests];
-    setUserRequests(nextRequests);
-    try {
-      localStorage.setItem('poststatus_custom_requests', JSON.stringify(nextRequests));
-    } catch (err) {
-      console.warn("Storage write failed.", err);
+    if (!requestName.trim() || !requestEmail.trim() || !requestTitle.trim() || !requestDesc.trim()) {
+      setProposalError('All fields are required.');
+      return;
     }
 
-    setRequestTitle('');
-    setRequestDesc('');
-    setRequestSubmitted(true);
-    setTimeout(() => setRequestSubmitted(false), 5000);
+    setIsSubmittingProposal(true);
+    setProposalError(null);
+
+    try {
+      const displayCat = activeCategoriesList.find(c => c.id === requestCat)?.name || requestCat;
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: requestName.trim(),
+          email: requestEmail.trim(),
+          inquiryType: 'custom_module',
+          moduleTitle: requestTitle.trim(),
+          moduleCategory: displayCat,
+          moduleDesc: requestDesc.trim(),
+          subject: `Custom Module Request: ${requestTitle.trim()}`,
+          message: `Proposed Module: ${requestTitle.trim()}\nCategory: ${displayCat}\nDescription: ${requestDesc.trim()}`
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to submit proposal.');
+      }
+
+      await response.json();
+
+      const newRequest = {
+        title: requestTitle,
+        desc: requestDesc,
+        cat: requestCat
+      };
+
+      const nextRequests = [newRequest, ...userRequests];
+      setUserRequests(nextRequests);
+      try {
+        localStorage.setItem('poststatus_custom_requests', JSON.stringify(nextRequests));
+      } catch (err) {
+        console.warn("Storage write failed.", err);
+      }
+
+      // Clear fields
+      setRequestTitle('');
+      setRequestDesc('');
+      setRequestName('');
+      setRequestEmail('');
+      setProposalError(null);
+      
+      setRequestSubmitted(true);
+      setTimeout(() => setRequestSubmitted(false), 5000);
+    } catch (err: any) {
+      console.error(err);
+      setProposalError(err.message || 'Failed to dispatch proposal over SMTP.');
+    } finally {
+      setIsSubmittingProposal(false);
+    }
   };
 
   return (
@@ -401,29 +448,56 @@ export default function AllFeaturesPage({ onBack, onNavigateToFeature }: AllFeat
                   <input
                     type="text"
                     required
+                    disabled={isSubmittingProposal}
+                    placeholder="Your Full Name"
+                    value={requestName}
+                    onChange={(e) => setRequestName(e.target.value)}
+                    className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50 disabled:opacity-50"
+                  />
+                </div>
+
+                <div>
+                  <input
+                    type="email"
+                    required
+                    disabled={isSubmittingProposal}
+                    placeholder="Your Email Address"
+                    value={requestEmail}
+                    onChange={(e) => setRequestEmail(e.target.value)}
+                    className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50 disabled:opacity-50"
+                  />
+                </div>
+
+                <div>
+                  <input
+                    type="text"
+                    required
+                    disabled={isSubmittingProposal}
                     placeholder="e.g. Bulk Stock Sync with Multi-vendor"
                     value={requestTitle}
                     onChange={(e) => setRequestTitle(e.target.value)}
-                    className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
+                    className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50 disabled:opacity-50"
                   />
                 </div>
                 
                 <div>
                   <textarea
                     required
-                    placeholder="Briefly describe how the status switcher should work visually..."
+                    disabled={isSubmittingProposal}
+                    placeholder="Describe how this status switcher should work visually (min 15 chars)..."
                     rows={3}
                     value={requestDesc}
                     onChange={(e) => setRequestDesc(e.target.value)}
-                    className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50 resize-none"
+                    className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50 resize-none disabled:opacity-50"
                   />
                 </div>
 
                 <div>
                   <select
                     value={requestCat}
+                    disabled={isSubmittingProposal}
                     onChange={(e) => setRequestCat(e.target.value)}
-                    className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-2 py-2 text-xs text-slate-400 focus:outline-none focus:text-white"
+                    className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-2 py-2 text-xs text-slate-400 focus:outline-none focus:text-white disabled:opacity-50"
                   >
                     {activeCategoriesList.map(cat => (
                       <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -431,11 +505,25 @@ export default function AllFeaturesPage({ onBack, onNavigateToFeature }: AllFeat
                   </select>
                 </div>
 
+                {proposalError && (
+                  <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[11px] text-rose-400 font-medium">
+                    {proposalError}
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all relative overflow-hidden"
+                  disabled={isSubmittingProposal}
+                  className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/20 active:scale-[98%] text-white text-xs font-semibold transition-all relative overflow-hidden flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  Submit Feature Module Proposal
+                  {isSubmittingProposal ? (
+                    <>
+                      <Icons.Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Serializing Proposal...</span>
+                    </>
+                  ) : (
+                    <span>Submit Feature Module Proposal</span>
+                  )}
                 </button>
               </form>
 

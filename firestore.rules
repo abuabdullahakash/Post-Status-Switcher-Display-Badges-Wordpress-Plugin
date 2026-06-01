@@ -32,5 +32,15 @@ service cloud.firestore {
     match /settings/{documentId} {
       allow read, write: if true;
     }
+
+    // auditLogs: read and write allowed
+    match /auditLogs/{documentId} {
+      allow read, write: if true;
+    }
+
+    // test_connection_metadata: read allowed
+    match /test_connection_metadata/{documentId} {
+      allow read: if true;
+    }
   }
 }
