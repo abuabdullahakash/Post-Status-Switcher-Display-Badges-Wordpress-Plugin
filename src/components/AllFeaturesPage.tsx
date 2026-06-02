@@ -266,7 +266,8 @@ export default function AllFeaturesPage({ onBack, onNavigateToFeature }: AllFeat
             <div className="space-y-4">
               <AnimatePresence mode="popLayout">
                 {filteredFeatures.map((feature, idx) => {
-                  const IconComp = (Icons as any)[feature.iconName] || Icons.Settings;
+                  const isSvgIcon = feature.iconName && (feature.iconName.trim().startsWith('<svg') || feature.iconName.includes('<svg') || feature.iconName.includes('xmlns='));
+                  const IconComp = !isSvgIcon ? ((Icons as any)[feature.iconName] || Icons.Settings) : null;
                   const isExpanded = !!expandedIds[feature.id];
 
                   return (
@@ -283,7 +284,14 @@ export default function AllFeaturesPage({ onBack, onNavigateToFeature }: AllFeat
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
                           <div className={`w-9 h-9 rounded-lg flex items-center justify-center bg-gradient-to-br ${feature.color || 'from-blue-500 to-indigo-500'} bg-opacity-20`}>
-                            <IconComp className="w-5 h-5 text-white" />
+                            {isSvgIcon ? (
+                              <div 
+                                className="w-5 h-5 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:stroke-[2] text-white"
+                                dangerouslySetInnerHTML={{ __html: feature.iconName }}
+                              />
+                            ) : (
+                              IconComp && <IconComp className="w-5 h-5 text-white" />
+                            )}
                           </div>
                           <div>
                             <h3 className="text-sm sm:text-base font-bold text-white group-hover:text-blue-400 transition-colors duration-200">
@@ -403,7 +411,13 @@ export default function AllFeaturesPage({ onBack, onNavigateToFeature }: AllFeat
               
               <div className="space-y-1.5">
                 {categories.map((cat) => {
-                  const CatIcon = (Icons as any)[cat.icon] || Icons.Tag;
+                  const isSvg = cat.icon && (
+                    cat.icon.trim().toLowerCase().startsWith('<svg') || 
+                    cat.icon.toLowerCase().includes('<svg') || 
+                    cat.icon.toLowerCase().includes('xmlns=') ||
+                    (cat.icon.trim().toLowerCase().startsWith('<') && cat.icon.toLowerCase().includes('svg'))
+                  );
+                  const CatIcon = !isSvg ? ((Icons as any)[cat.icon] || Icons.Tag) : null;
                   const isActive = selectedCategory === cat.id;
 
                   return (
@@ -417,7 +431,14 @@ export default function AllFeaturesPage({ onBack, onNavigateToFeature }: AllFeat
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <CatIcon className={`w-4 h-4 ${isActive ? 'text-blue-400' : 'text-slate-500'}`} />
+                        {isSvg ? (
+                          <div 
+                            className={`w-4 h-4 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:stroke-[2] ${isActive ? 'text-blue-400' : 'text-slate-500'}`}
+                            dangerouslySetInnerHTML={{ __html: cat.icon }}
+                          />
+                        ) : (
+                          CatIcon && <CatIcon className={`w-4 h-4 ${isActive ? 'text-blue-400' : 'text-slate-500'}`} />
+                        )}
                         <span>{cat.name}</span>
                       </div>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${

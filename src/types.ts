@@ -94,4 +94,7 @@ export interface SiteSettings {
   autoReplyTemplate?: string;
   customAutoReplySubject?: string;
   customAutoReplyTemplate?: string;
+  enableStatusModal?: boolean;
+  statusModalTitle?: string;
+  statusModalMessage?: string;
 }

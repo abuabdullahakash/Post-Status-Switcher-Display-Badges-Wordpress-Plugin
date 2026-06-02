@@ -52,13 +52,14 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'features' | 'pricing' | 'faq' | 'settings' | 'inquiries'>('dashboard');
-  const [settingsSubTab, setSettingsSubTab] = useState<'identity' | 'hero' | 'marketing' | 'download' | 'smtp' | 'danger' | 'categories'>('identity');
-  
-  // Custom states for category management
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryId, setNewCategoryId] = useState('');
-  const [newCategoryIcon, setNewCategoryIcon] = useState('Sparkles');
-  const [newCategoryColor, setNewCategoryColor] = useState('text-blue-400');
+  const [settingsSubTab, setSettingsSubTab] = useState<'identity' | 'hero' | 'marketing' | 'download' | 'smtp' | 'danger' | 'status_modal'>('identity');
+
+  // Quick category creation popup states
+  const [quickCategoryOpen, setQuickCategoryOpen] = useState(false);
+  const [quickCategoryName, setQuickCategoryName] = useState('');
+  const [quickCategoryIcon, setQuickCategoryIcon] = useState('');
+  const [quickCategoryTarget, setQuickCategoryTarget] = useState<'new' | 'edit' | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<{ id: string; name: string; matchesCount: number } | null>(null);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -698,27 +699,35 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     }
   };
 
-  const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) {
+
+
+  const handleCreateQuickCategory = async () => {
+    if (!quickCategoryName.trim()) {
       alert("Please enter a category name");
       return;
     }
-    const id = newCategoryId.trim() || newCategoryName.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (!id) {
-      alert("Invalid category id generated");
+    const baseId = quickCategoryName.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!baseId) {
+      alert("Invalid category name");
       return;
     }
     const currentCategories = settings.categoriesList || DEFAULT_CATEGORIES;
-    if (currentCategories.some((c: any) => c.id === id)) {
-      alert(`A category with ID "${id}" already exists. Please choose a unique name or ID.`);
-      return;
+    let id = baseId;
+    let counter = 1;
+    while (currentCategories.some((c: any) => c.id === id)) {
+      id = `${baseId}${counter}`;
+      counter++;
     }
+
+    const colors = ['text-blue-400', 'text-pink-400', 'text-indigo-400', 'text-emerald-400', 'text-rose-400', 'text-amber-400', 'text-purple-400', 'text-cyan-400'];
+    const color = colors[currentCategories.length % colors.length];
+    const icon = quickCategoryIcon.trim() || 'Sparkles';
 
     const newCat = {
       id,
-      name: newCategoryName.trim(),
-      icon: newCategoryIcon.trim() || 'Sparkles',
-      color: newCategoryColor
+      name: quickCategoryName.trim(),
+      icon,
+      color
     };
 
     const updatedCategories = [...currentCategories, newCat];
@@ -727,11 +736,18 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
         ...settings,
         categoriesList: updatedCategories
       });
-      setNewCategoryName('');
-      setNewCategoryId('');
-      setNewCategoryIcon('Sparkles');
-      setNewCategoryColor('text-blue-400');
-      setToast({ message: "New category created and updated in database", type: "success" });
+      
+      // Auto assign updated category to whichever form is active
+      if (quickCategoryTarget === 'new') {
+        setNewFeature(prev => ({ ...prev, category: id }));
+      } else if (quickCategoryTarget === 'edit' && editingFeature) {
+        setEditingFeature(prev => prev ? { ...prev, category: id } : null);
+      }
+
+      setQuickCategoryOpen(false);
+      setQuickCategoryName('');
+      setQuickCategoryIcon('');
+      setToast({ message: `Category "${quickCategoryName.trim()}" created successfully!`, type: "success" });
       setTimeout(() => setToast(null), 3000);
     } catch (err) {
       setToast({ message: "Failed to update category list", type: "error" });
@@ -739,7 +755,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     }
   };
 
-  const handleDeleteCategory = async (catId: string) => {
+  const handleDeleteCategory = (catId: string) => {
     if (catId === 'general') {
       alert("The general category cannot be deleted as it is the default fallback category.");
       return;
@@ -747,14 +763,24 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     const currentCategories = settings.categoriesList || DEFAULT_CATEGORIES;
     const matchesCount = features.filter(f => f.category === catId).length;
     
-    let confirmMsg = `Are you sure you want to delete the "${catId}" category?`;
-    if (matchesCount > 0) {
-      confirmMsg += `\n\n⚠️ WARNING: There are ${matchesCount} features associated with this category. If you delete it, they will automatically fallback and merge into the generic "General Features" category.`;
-    }
+    const catObj = currentCategories.find((c: any) => c.id === catId);
+    const catName = catObj ? catObj.name : catId;
+    
+    setCategoryToDelete({
+      id: catId,
+      name: catName,
+      matchesCount
+    });
+  };
 
-    if (confirm(confirmMsg)) {
-      const updatedCategories = currentCategories.filter((c: any) => c.id !== catId);
-      
+  const handleConfirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+    const { id: catId } = categoryToDelete;
+    const currentCategories = settings.categoriesList || DEFAULT_CATEGORIES;
+    const updatedCategories = currentCategories.filter((c: any) => c.id !== catId);
+    
+    setIsSaving(true);
+    try {
       // Update those features to change their category to general to keep relational integrity
       const featuresToUpdate = features.filter(f => f.category === catId);
       for (const feat of featuresToUpdate) {
@@ -764,17 +790,18 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
         });
       }
 
-      try {
-        await updateSettings({
-          ...settings,
-          categoriesList: updatedCategories
-        });
-        setToast({ message: "Category deleted and associated features re-routed", type: "success" });
-        setTimeout(() => setToast(null), 3000);
-      } catch (err) {
-        setToast({ message: "Failed to delete category", type: "error" });
-        setTimeout(() => setToast(null), 3000);
-      }
+      await updateSettings({
+        ...settings,
+        categoriesList: updatedCategories
+      });
+      setToast({ message: "Category deleted and associated features re-routed", type: "success" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (err) {
+      setToast({ message: "Failed to delete category", type: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setIsSaving(false);
+      setCategoryToDelete(null);
     }
   };
 
@@ -1544,19 +1571,60 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-slate-400 mb-1 font-medium">Lucide Vector Icon Family</label>
-                          <select 
-                            value={editingFeature.iconName}
-                            onChange={(e) => setEditingFeature({ ...editingFeature, iconName: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-slate-300 text-sm focus:outline-none focus:border-blue-500"
-                          >
-                            {lucideIconNames.map(name => (
-                              <option key={name} value={name}>{name}</option>
-                            ))}
-                          </select>
+                          <div className="flex justify-between items-center mb-1">
+                            <label className="block text-xs text-slate-400 font-medium">Paste SVG Code or Type Lucide Name</label>
+                            <a 
+                              href="https://lucide.dev" 
+                              target="_blank" 
+                              rel="noreferrer noopener"
+                              className="text-[10px] text-blue-400 hover:underline flex items-center gap-1"
+                            >
+                              <Icons.Globe className="w-3 h-3 text-blue-400" />
+                              Browse Lucide (lucide.dev)
+                            </a>
+                          </div>
+                          <div className="flex gap-2">
+                            <textarea 
+                              rows={2}
+                              value={editingFeature.iconName || 'Sparkles'}
+                              onChange={(e) => setEditingFeature({ ...editingFeature, iconName: e.target.value })}
+                              className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-blue-500 resize-none"
+                              placeholder="e.g. Sparkles, or <svg xmlns=..."
+                            />
+                            {/* Live Icon Preview box */}
+                            <div className="w-12 h-12 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center justify-center shrink-0">
+                              {editingFeature.iconName && (editingFeature.iconName.trim().startsWith('<svg') || editingFeature.iconName.includes('<svg') || editingFeature.iconName.includes('xmlns=')) ? (
+                                <div 
+                                  className="w-5 h-5 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:stroke-[2] text-white"
+                                  dangerouslySetInnerHTML={{ __html: editingFeature.iconName }}
+                                />
+                              ) : (
+                                (() => {
+                                  const IconComponent = (Icons as any)[editingFeature.iconName] || Icons.HelpCircle;
+                                  return <IconComponent className="w-5 h-5 text-white" />;
+                                })()
+                              )}
+                            </div>
+                          </div>
+                          <span className="text-[9px] text-slate-500 mt-1 block font-medium">Paste custom SVG code or type standard Lucide name like "Home", "Calendar", "Sparkles"!</span>
                         </div>
                         <div>
-                          <label className="block text-xs text-slate-400 mb-1 font-medium">Card Category</label>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs text-slate-400 font-medium">Card Category</label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setQuickCategoryTarget('edit');
+                                setQuickCategoryName('');
+                                setQuickCategoryIcon('');
+                                setQuickCategoryOpen(true);
+                              }}
+                              className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold cursor-pointer py-1 px-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all shadow-sm"
+                            >
+                              <Icons.Plus className="w-3 h-3 text-emerald-400" />
+                              <span>Add Category</span>
+                            </button>
+                          </div>
                           <select 
                             value={editingFeature.category || 'general'}
                             onChange={(e) => setEditingFeature({ ...editingFeature, category: e.target.value })}
@@ -1972,19 +2040,60 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-slate-400 mb-1 font-medium">Lucide Vector Icon Family</label>
-                          <select 
-                            value={newFeature.iconName || 'Sparkles'}
-                            onChange={(e) => setNewFeature({ ...newFeature, iconName: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-300 text-sm focus:outline-none focus:border-blue-500"
-                          >
-                            {lucideIconNames.map(name => (
-                              <option key={name} value={name}>{name}</option>
-                            ))}
-                          </select>
+                          <div className="flex justify-between items-center mb-1">
+                            <label className="block text-xs text-slate-400 font-medium">Paste SVG Code or Type Lucide Name</label>
+                            <a 
+                              href="https://lucide.dev" 
+                              target="_blank" 
+                              rel="noreferrer noopener"
+                              className="text-[10px] text-blue-400 hover:underline flex items-center gap-1"
+                            >
+                              <Icons.Globe className="w-3 h-3 text-blue-400" />
+                              Browse Lucide (lucide.dev)
+                            </a>
+                          </div>
+                          <div className="flex gap-2">
+                            <textarea 
+                              rows={2}
+                              value={newFeature.iconName || 'Sparkles'}
+                              onChange={(e) => setNewFeature({ ...newFeature, iconName: e.target.value })}
+                              className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-white text-xs font-mono focus:outline-none focus:border-blue-500 resize-none animate-none"
+                              placeholder="e.g. Sparkles, or <svg xmlns=..."
+                            />
+                            {/* Live Icon Preview box */}
+                            <div className="w-12 h-12 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center justify-center shrink-0">
+                              {newFeature.iconName && (newFeature.iconName.trim().startsWith('<svg') || newFeature.iconName.includes('<svg') || newFeature.iconName.includes('xmlns=')) ? (
+                                <div 
+                                  className="w-5 h-5 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:stroke-[2] text-white"
+                                  dangerouslySetInnerHTML={{ __html: newFeature.iconName }}
+                                />
+                              ) : (
+                                (() => {
+                                  const IconComponent = (Icons as any)[newFeature.iconName || 'Sparkles'] || Icons.HelpCircle;
+                                  return <IconComponent className="w-5 h-5 text-white" />;
+                                })()
+                              )}
+                            </div>
+                          </div>
+                          <span className="text-[9px] text-slate-500 mt-1 block font-medium">Paste custom SVG code or type standard Lucide name like "Home", "Calendar", "Sparkles"!</span>
                         </div>
                         <div>
-                          <label className="block text-xs text-slate-400 mb-1 font-medium">Card Category</label>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs text-slate-400 font-medium">Card Category</label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setQuickCategoryTarget('new');
+                                setQuickCategoryName('');
+                                setQuickCategoryIcon('');
+                                setQuickCategoryOpen(true);
+                              }}
+                              className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold cursor-pointer py-1 px-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all shadow-sm"
+                            >
+                              <Icons.Plus className="w-3 h-3 text-emerald-400" />
+                              <span>Add Category</span>
+                            </button>
+                          </div>
                           <select 
                             value={newFeature.category || 'general'}
                             onChange={(e) => setNewFeature({ ...newFeature, category: e.target.value })}
@@ -2394,7 +2503,13 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                               feat.useCase.toLowerCase().includes(featureSearchQuery.toLowerCase())
                             )
                             .map((feat) => {
-                              const IconRaw = (Icons as any)[feat.iconName] || Icons.HelpCircle;
+                              const isSvgIcon = feat.iconName && (
+                                feat.iconName.trim().toLowerCase().startsWith('<svg') || 
+                                feat.iconName.toLowerCase().includes('<svg') || 
+                                feat.iconName.toLowerCase().includes('xmlns=') ||
+                                (feat.iconName.trim().toLowerCase().startsWith('<') && feat.iconName.toLowerCase().includes('svg'))
+                              );
+                              const IconRaw = !isSvgIcon ? ((Icons as any)[feat.iconName] || Icons.HelpCircle) : null;
                               return (
                                 <div 
                                   key={feat.id}
@@ -2404,7 +2519,14 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                                     <div className="flex items-center justify-between gap-3 border-b border-slate-900/60 pb-3">
                                       <div className="flex items-center gap-3 min-w-0">
                                         <div className={`p-2 rounded-lg bg-gradient-to-br ${feat.color} text-white shrink-0`}>
-                                          <IconRaw className="w-5 h-5" />
+                                          {isSvgIcon ? (
+                                            <div 
+                                              className="w-5 h-5 flex items-center justify-center [&>svg]:w-5 [&>svg]:h-5 [&>svg]:stroke-current [&>svg]:stroke-[2]"
+                                              dangerouslySetInnerHTML={{ __html: feat.iconName }}
+                                            />
+                                          ) : (
+                                            IconRaw && <IconRaw className="w-5 h-5" />
+                                          )}
                                         </div>
                                         <div className="min-w-0">
                                           <h4 className="font-bold text-white text-sm truncate leading-snug">{feat.title}</h4>
@@ -2522,14 +2644,27 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                                   feat.useCase.toLowerCase().includes(featureSearchQuery.toLowerCase())
                                 )
                                 .map((feat) => {
-                                  const IconRaw = (Icons as any)[feat.iconName] || Icons.HelpCircle;
+                                  const isSvgIcon = feat.iconName && (
+                                    feat.iconName.trim().toLowerCase().startsWith('<svg') || 
+                                    feat.iconName.toLowerCase().includes('<svg') || 
+                                    feat.iconName.toLowerCase().includes('xmlns=') ||
+                                    (feat.iconName.trim().toLowerCase().startsWith('<') && feat.iconName.toLowerCase().includes('svg'))
+                                  );
+                                  const IconRaw = !isSvgIcon ? ((Icons as any)[feat.iconName] || Icons.HelpCircle) : null;
                                   return (
                                     <tr key={feat.id} className="border-b border-slate-900 hover:bg-slate-900/30 transition-colors">
                                       <td className="p-4 pl-6 font-mono font-bold text-slate-500 font-medium">#{feat.order}</td>
                                       <td className="p-4">
                                         <div className="flex items-center gap-3">
                                           <div className={`p-1.5 rounded-lg bg-gradient-to-br ${feat.color} text-white shrink-0`}>
-                                            <IconRaw className="w-4 h-4" />
+                                            {isSvgIcon ? (
+                                              <div 
+                                                className="w-4 h-4 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:stroke-[2]"
+                                                dangerouslySetInnerHTML={{ __html: feat.iconName }}
+                                              />
+                                            ) : (
+                                              IconRaw && <IconRaw className="w-4 h-4" />
+                                            )}
                                           </div>
                                           <div className="min-w-0">
                                             <div className="font-bold text-white truncate max-w-[150px]">{feat.title}</div>
@@ -3329,15 +3464,15 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setSettingsSubTab('categories')}
+                      onClick={() => setSettingsSubTab('status_modal')}
                       className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
-                        settingsSubTab === 'categories' 
+                        settingsSubTab === 'status_modal' 
                           ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10 whitespace-nowrap' 
                           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
                       }`}
                     >
-                      <Icons.FolderTree className="w-3.5 h-3.5 shrink-0" />
-                      Feature Categories
+                      <Icons.Bell className="w-3.5 h-3.5 shrink-0" />
+                      Construction Alert Popup
                     </button>
                   </div>
 
@@ -3850,144 +3985,62 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                       </div>
                     )}
 
-                    {settingsSubTab === 'categories' && (
+
+
+                    {settingsSubTab === 'status_modal' && (
                       <div className="space-y-6">
                         <div className="flex items-center gap-2">
-                          <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
-                            <Icons.FolderTree className="w-4 h-4" />
+                          <div className="p-2 rounded-lg bg-pink-500/10 text-pink-400">
+                            <Icons.Bell className="w-4 h-4" />
                           </div>
                           <div>
-                            <h4 className="text-sm font-bold text-white uppercase tracking-wide">Feature Categories Management</h4>
-                            <p className="text-[11px] text-slate-400">Create, edit, or delete the dynamic categorization nodes used to organize features across the frontend.</p>
+                            <h4 className="text-sm font-bold text-white uppercase tracking-wide">Website Under Construction Status Alert</h4>
+                            <p className="text-[11px] text-slate-400">Configure whether an eye-catching status popup alerts visitors that development is underway when they open the site.</p>
                           </div>
                         </div>
 
-                        {/* Current Categories Grid */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          <div className="space-y-4">
-                            <h5 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Active Dynamic Categories</h5>
-                            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                              {(settings.categoriesList || DEFAULT_CATEGORIES).map((cat) => {
-                                const IconComponent = (Icons as any)[cat.icon] || Icons.Folder;
-                                const featureCount = features.filter(f => f.category === cat.id || (!f.category && cat.id === 'general')).length;
-                                
-                                return (
-                                  <div key={cat.id} className="p-4 rounded-xl bg-slate-900 border border-slate-800/60 flex items-center justify-between gap-3 group hover:border-slate-700 transition-all">
-                                    <div className="flex items-center gap-3">
-                                      <div className={`p-2.5 rounded-lg bg-slate-955 border border-slate-800 ${cat.color || 'text-blue-400'}`}>
-                                        <IconComponent className="w-4 h-4" />
-                                      </div>
-                                      <div>
-                                        <h6 className="text-sm font-semibold text-white">{cat.name}</h6>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                          <span className="text-[10px] font-mono text-slate-500 bg-slate-955 px-1.5 py-0.5 rounded border border-slate-900">ID: {cat.id}</span>
-                                          <span className="text-[10px] text-blue-400 font-medium">{featureCount} active {featureCount === 1 ? 'card' : 'cards'}</span>
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    {cat.id !== 'general' ? (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteCategory(cat.id)}
-                                        className="p-2 rounded-lg bg-rose-950/20 text-rose-400 hover:bg-rose-900 hover:text-white transition-all cursor-pointer opacity-80 group-hover:opacity-100"
-                                        title="Delete Category"
-                                      >
-                                        <Icons.Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    ) : (
-                                      <span className="text-[10px] text-slate-600 uppercase font-bold tracking-wider px-2 py-1 bg-slate-950 border border-slate-900 rounded-lg">System Default</span>
-                                    )}
-                                  </div>
-                                );
-                              })}
+                        <div className="p-4 sm:p-6 rounded-2xl bg-slate-900/15 border border-slate-900/30 space-y-6">
+                          {/* ON/OFF TOGGLE */}
+                          <div className="flex items-center justify-between p-4 rounded-xl bg-slate-900/80 border border-slate-800">
+                            <div className="space-y-1">
+                              <span className="text-xs font-bold text-white uppercase tracking-wider block">Show Alert Popup to Visitors</span>
+                              <span className="text-[11px] text-slate-400 block max-w-md">
+                                When enabled, a master-controlled banner explains to users that the platform is in progress but plugins can still be downloaded.
+                              </span>
                             </div>
+                            <label className="relative inline-flex items-center cursor-pointer select-none">
+                              <input 
+                                type="checkbox" 
+                                checked={settings.enableStatusModal ?? true}
+                                onChange={(e) => updateSettings({ ...settings, enableStatusModal: e.target.checked })}
+                                className="sr-only peer"
+                              />
+                              <div className="w-11 h-6 bg-slate-800 rounded-full peer peer-focus:ring-2 peer-focus:ring-pink-500/30 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400/80 peer-checked:after:bg-white after:border-slate-350 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                            </label>
                           </div>
 
-                          {/* Add New Category Card */}
-                          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80 space-y-4 h-fit">
-                            <h5 className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                              <Icons.Plus className="w-4 h-4 text-emerald-400" />
-                              Add New Category Node
-                            </h5>
-                            
-                            <div className="space-y-3">
-                              <div>
-                                <label className="block text-[10px] text-slate-400 mb-1 font-medium">Category Name</label>
-                                <input 
-                                  type="text"
-                                  value={newCategoryName}
-                                  onChange={(e) => {
-                                    setNewCategoryName(e.target.value);
-                                    setNewCategoryId(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''));
-                                  }}
-                                  className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                                  placeholder="e.g., Woocommerce Extras"
-                                />
-                              </div>
+                          {/* TEXT CONTROLS */}
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-xs text-slate-400 font-medium mb-1.5 uppercase tracking-wider">Alert Modal Headline</label>
+                              <input 
+                                type="text"
+                                value={settings.statusModalTitle || ""}
+                                placeholder="e.g. Website Under Construction"
+                                onChange={(e) => updateSettings({ ...settings, statusModalTitle: e.target.value })}
+                                className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-pink-500/40 font-medium transition-colors hover:border-slate-800/40"
+                              />
+                            </div>
 
-                              <div>
-                                <label className="block text-[10px] text-slate-400 mb-1 font-medium">Unique Node ID (Lowercase, Alphanumeric)</label>
-                                <input 
-                                  type="text"
-                                  value={newCategoryId}
-                                  onChange={(e) => setNewCategoryId(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
-                                  className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500 font-mono"
-                                  placeholder="e.g., woocommerce"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-[10px] text-slate-400 mb-1 font-medium">Tailwind Color Accent Class</label>
-                                <select 
-                                  value={newCategoryColor}
-                                  onChange={(e) => setNewCategoryColor(e.target.value)}
-                                  className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                                >
-                                  <option value="text-blue-400">text-blue-400 (Blue Accent)</option>
-                                  <option value="text-pink-400">text-pink-400 (Pink Accent)</option>
-                                  <option value="text-indigo-400">text-indigo-400 (Indigo Accent)</option>
-                                  <option value="text-emerald-400">text-emerald-400 (Emerald Accent)</option>
-                                  <option value="text-amber-400">text-amber-400 (Amber Accent)</option>
-                                  <option value="text-red-400">text-red-400 (Red Accent)</option>
-                                  <option value="text-purple-400">text-purple-400 (Purple Accent)</option>
-                                  <option value="text-teal-400">text-teal-400 (Teal Accent)</option>
-                                  <option value="text-sky-400">text-sky-400 (Sky Accent)</option>
-                                  <option value="text-rose-400">text-rose-400 (Rose Accent)</option>
-                                </select>
-                              </div>
-
-                              <div>
-                                <div className="flex justify-between items-center mb-1">
-                                  <label className="block text-[10px] text-slate-400 font-medium">Lucide Vector Icon Name</label>
-                                  <a 
-                                    href="https://lucide.dev/icons" 
-                                    target="_blank" 
-                                    rel="noreferrer noopener"
-                                    className="text-[10px] text-blue-400 hover:underline flex items-center gap-1"
-                                  >
-                                    <Icons.Globe className="w-3 h-3" />
-                                    Find Icons Platform
-                                  </a>
-                                </div>
-                                <input 
-                                  type="text"
-                                  value={newCategoryIcon}
-                                  onChange={(e) => setNewCategoryIcon(e.target.value)}
-                                  className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                                  placeholder="e.g., ShoppingCart, Star, Zap"
-                                />
-                                <span className="text-[9px] text-slate-500 mt-0.5 block">Type any standard PascalCase Lucide icon name (e.g. Columns, ShoppingCart, Key, Layers)</span>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={handleAddCategory}
-                                className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10"
-                              >
-                                <Icons.Plus className="w-3.5 h-3.5" />
-                                Save & Broadcast Category Node
-                              </button>
+                            <div>
+                              <label className="block text-xs text-slate-400 font-medium mb-1.5 uppercase tracking-wider">Alert Modal Body Narrative</label>
+                              <textarea
+                                rows={6}
+                                value={settings.statusModalMessage || ""}
+                                placeholder="Introduce your message to visitors here describing construction details and download info..."
+                                onChange={(e) => updateSettings({ ...settings, statusModalMessage: e.target.value })}
+                                className="w-full bg-slate-950/50 border border-slate-900/50 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-pink-500/40 font-normal transition-colors hover:border-slate-800/40 resize-y leading-relaxed"
+                              />
                             </div>
                           </div>
                         </div>
@@ -4065,6 +4118,200 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
         )}
       </AnimatePresence>
 
+      {/* QUICK CATEGORY CREATION MODAL */}
+      <AnimatePresence>
+        {quickCategoryOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[250] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              className="bg-slate-900 border border-slate-800 rounded-3xl max-w-3xl w-full p-6 sm:p-8 flex flex-col shadow-2xl relative"
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setQuickCategoryOpen(false)}
+                className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-white bg-slate-950/50 hover:bg-slate-950 border border-slate-800/60 transition-all cursor-pointer"
+              >
+                <Icons.X className="w-4 h-4" />
+              </button>
+
+              {/* Title / Description */}
+              <div className="flex items-center gap-2.5 mb-6">
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/10">
+                  <Icons.FolderTree className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white uppercase tracking-wider text-left">Category Manager</h4>
+                  <p className="text-[11px] text-slate-400 text-left">Instantly register new category nodes or delete custom categories linked to features.</p>
+                </div>
+              </div>
+
+              {/* 2-Column Layout */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[300px]">
+                {/* Left Column: Form */}
+                <div className="space-y-4 pr-0 md:pr-4 md:border-r border-slate-800">
+                  <h5 className="text-xs font-bold uppercase tracking-wider text-emerald-400 text-left mb-2">Create New Node</h5>
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-bold mb-1.5 uppercase tracking-wider text-left">Category Name</label>
+                    <input
+                      type="text"
+                      value={quickCategoryName}
+                      onChange={(e) => setQuickCategoryName(e.target.value)}
+                      placeholder="e.g. Real Estate Features"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-xs focus:outline-none focus:border-emerald-500 transition-all font-semibold"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider text-left">Paste SVG Icon Code</label>
+                      <a 
+                        href="https://lucide.dev" 
+                        target="_blank" 
+                        rel="noreferrer noopener"
+                        className="text-[10px] text-emerald-450 hover:underline flex items-center gap-1 font-semibold"
+                      >
+                        <Icons.Globe className="w-3 h-3 text-emerald-400" />
+                        Find Icons (Lucide.dev)
+                      </a>
+                    </div>
+                    <textarea
+                      rows={4}
+                      value={quickCategoryIcon}
+                      onChange={(e) => setQuickCategoryIcon(e.target.value)}
+                      placeholder='e.g., <svg xmlns="http://www.w3.org/2000/svg"...'
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-white text-xs font-mono resize-none transition-all"
+                    />
+                    <span className="text-[9px] text-slate-500 mt-1 block text-left">Click "Copy SVG" on any icon at lucide.dev and paste it here. Secure Category Node ID is derived automatically!</span>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setQuickCategoryOpen(false)}
+                      className="flex-1 py-2.5 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-950 text-slate-400 hover:text-white font-semibold text-xs transition-all active:scale-[98%] cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCreateQuickCategory}
+                      className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all active:scale-[98%] flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-600/10"
+                    >
+                      <Icons.FolderPlus className="w-3.5 h-3.5" />
+                      Create & Select
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right Column: Existing Categories List */}
+                <div className="flex flex-col">
+                  <h5 className="text-xs font-bold uppercase tracking-wider text-slate-400 text-left mb-2">Active Categories List</h5>
+                  <div className="flex-1 overflow-y-auto max-h-[300px] pr-1 space-y-2 custom-scrollbar">
+                    {(settings.categoriesList || DEFAULT_CATEGORIES).map((cat) => {
+                      const isSvg = cat.icon && (
+                        cat.icon.trim().toLowerCase().startsWith('<svg') || 
+                        cat.icon.toLowerCase().includes('<svg') || 
+                        cat.icon.toLowerCase().includes('xmlns=') ||
+                        (cat.icon.trim().toLowerCase().startsWith('<') && cat.icon.toLowerCase().includes('svg'))
+                      );
+                      const IconComponent = !isSvg ? ((Icons as any)[cat.icon] || Icons.Folder) : null;
+                      const featureCount = features.filter(f => f.category === cat.id || (!f.category && cat.id === 'general')).length;
+
+                      return (
+                        <div key={cat.id} className="p-2.5 rounded-xl bg-slate-950 border border-slate-850/60 flex items-center justify-between gap-3 group hover:border-slate-800 transition-all">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className={`p-1.5 rounded-lg bg-slate-900 border border-slate-800 shrink-0 ${cat.color || 'text-blue-400'}`}>
+                              {isSvg ? (
+                                <div 
+                                  className="w-3.5 h-3.5 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:stroke-[2]"
+                                  dangerouslySetInnerHTML={{ __html: cat.icon }}
+                                />
+                              ) : (
+                                IconComponent && <IconComponent className="w-3.5 h-3.5" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-white truncate max-w-[130px]" title={cat.name}>{cat.name}</div>
+                              <div className="text-[9px] text-slate-500 font-mono mt-0.5 truncate">{featureCount} cards connected</div>
+                            </div>
+                          </div>
+
+                          {cat.id !== 'general' && cat.id !== 'custom' ? (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCategory(cat.id)}
+                              className="p-1.5 rounded-lg bg-rose-950/20 text-rose-400 hover:bg-rose-900 hover:text-white transition-all cursor-pointer opacity-80 group-hover:opacity-100 shrink-0"
+                              title="Delete Category"
+                            >
+                              <Icons.Trash2 className="w-3 h-3" />
+                            </button>
+                          ) : (
+                            <span className="text-[8px] text-slate-600 uppercase font-mono tracking-wider px-1.5 py-0.5 bg-slate-900 border border-slate-850 rounded">System</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* CUSTOM DELETE CONFIRMATION OVERLAY */}
+              {categoryToDelete && (
+                <div className="absolute inset-0 z-[260] bg-slate-950/95 backdrop-blur-sm p-6 sm:p-8 flex flex-col justify-center items-center text-center rounded-3xl animate-fade-in">
+                  <div className="p-3 bg-rose-500/10 text-rose-450 border border-rose-500/20 rounded-full mb-4">
+                    <Icons.ShieldAlert className="w-8 h-8 text-rose-500 animate-pulse" />
+                  </div>
+                  
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-white mb-2">Delete "{categoryToDelete.name}" Category?</h4>
+                  
+                  <div className="text-xs text-slate-300 max-w-md mb-6 leading-relaxed">
+                    Are you sure you want to permanently delete this category?
+                    {categoryToDelete.matchesCount > 0 && (
+                      <div className="mt-3 p-3 bg-rose-950/30 border border-rose-900/40 text-rose-200 rounded-xl font-medium text-left">
+                        ⚠️ <strong>Warning:</strong> There are <strong>{categoryToDelete.matchesCount} features</strong> connected to this category. They will automatically fallback and merge into the <strong>General Features</strong> category to keep consistency.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3 w-full max-w-xs justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setCategoryToDelete(null)}
+                      className="flex-1 py-2.5 rounded-xl border border-slate-850 hover:border-slate-800 bg-slate-950 text-slate-400 hover:text-white font-semibold text-xs transition-all active:scale-[98%] cursor-pointer"
+                      disabled={isSaving}
+                    >
+                      No, Keep It
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConfirmDeleteCategory}
+                      className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-[98%] cursor-pointer shadow-lg shadow-rose-600/10"
+                      disabled={isSaving}
+                    >
+                      {isSaving ? (
+                        <Icons.RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Icons.Trash2 className="w-3.5 h-3.5" />
+                      )}
+                      Yes, Delete
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* PENDING CREATIONS APPROVAL MODAL */}
       <AnimatePresence>
         {showPendingCreatesModal && (
@@ -4105,13 +4352,26 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                   </div>
                 ) : (
                   pendingCreates.map((item) => {
-                    const featureIcon = (Icons as any)[item.iconName || "Sparkles"] || Icons.Sparkles;
+                    const isSvgIcon = item.iconName && (
+                      item.iconName.trim().toLowerCase().startsWith('<svg') || 
+                      item.iconName.toLowerCase().includes('<svg') || 
+                      item.iconName.toLowerCase().includes('xmlns=') ||
+                      (item.iconName.trim().toLowerCase().startsWith('<') && item.iconName.toLowerCase().includes('svg'))
+                    );
+                    const featureIcon = !isSvgIcon ? ((Icons as any)[item.iconName || "Sparkles"] || Icons.Sparkles) : null;
                     return (
                       <div key={item.id} className="p-5 bg-slate-950 border border-slate-850 rounded-2xl space-y-4 hover:border-slate-800 transition-all">
                         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-900/60 pb-3">
                           <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-lg bg-gradient-to-br ${item.color || 'from-blue-500 to-indigo-500'} text-white shrink-0`}>
-                              {React.createElement(featureIcon, { className: "w-5 h-5" })}
+                              {isSvgIcon ? (
+                                <div 
+                                  className="w-5 h-5 flex items-center justify-center [&>svg]:w-5 [&>svg]:h-5 [&>svg]:stroke-current [&>svg]:stroke-[2]"
+                                  dangerouslySetInnerHTML={{ __html: item.iconName }}
+                                />
+                              ) : (
+                                featureIcon && React.createElement(featureIcon, { className: "w-5 h-5" })
+                              )}
                             </div>
                             <div>
                               <h5 className="font-bold text-white text-sm">{item.title}</h5>

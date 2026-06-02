@@ -245,7 +245,13 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
     );
   }
 
-  const IconComponent = (Icons as any)[feature.iconName] || Icons.HelpCircle;
+  const isSvgIcon = feature.iconName && (
+    feature.iconName.trim().toLowerCase().startsWith('<svg') || 
+    feature.iconName.toLowerCase().includes('<svg') || 
+    feature.iconName.toLowerCase().includes('xmlns=') ||
+    (feature.iconName.trim().startsWith('<') && feature.iconName.toLowerCase().includes('svg'))
+  );
+  const IconComponent = !isSvgIcon ? ((Icons as any)[feature.iconName] || Icons.HelpCircle) : null;
 
   // Custom testimonials per feature ID
   const testimonialsMap: Record<string, { quote: string; author: string; role: string }> = {
@@ -1002,7 +1008,14 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
                     <span className="text-[10px] text-slate-500 font-mono">Listing ID #1844</span>
                     {sandboxBoolean && (
                       <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 bg-gradient-to-r ${feature.color} text-white`}>
-                        <IconComponent className="w-3 h-3" />
+                        {isSvgIcon ? (
+                          <div 
+                            className="w-3 h-3 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:stroke-[2] text-white"
+                            dangerouslySetInnerHTML={{ __html: feature.iconName }}
+                          />
+                        ) : (
+                          IconComponent && <IconComponent className="w-3 h-3" />
+                        )}
                         {feature.title}
                       </span>
                     )}
@@ -1066,7 +1079,14 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                 <div className={`p-2.5 sm:p-3 md:p-3 lg:p-4 rounded-xl lg:rounded-2xl bg-gradient-to-br ${feature.color} shadow-xl text-white shrink-0`}>
-                  <IconComponent className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 lg:w-12 lg:h-12" />
+                  {isSvgIcon ? (
+                    <div 
+                      className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 lg:w-12 lg:h-12 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:stroke-[2] text-white"
+                      dangerouslySetInnerHTML={{ __html: feature.iconName }}
+                    />
+                  ) : (
+                    IconComponent && <IconComponent className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 lg:w-12 lg:h-12" />
+                  )}
                 </div>
                 <div>
                   <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-black text-slate-100 tracking-tight leading-tight">

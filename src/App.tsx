@@ -11,6 +11,7 @@ import AdminDashboard from './components/AdminDashboard';
 import SingleFeaturePage from './components/SingleFeaturePage';
 import AllFeaturesPage from './components/AllFeaturesPage';
 import { DataProvider } from './context/DataContext';
+import StatusModal from './components/StatusModal';
 
 export default function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -81,6 +82,7 @@ export default function App() {
 
   return (
     <DataProvider>
+      <StatusModal />
       {isAdminOpen ? (
         <AdminDashboard onClose={handleCloseAdmin} />
       ) : (

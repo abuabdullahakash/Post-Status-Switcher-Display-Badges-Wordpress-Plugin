@@ -70,10 +70,17 @@ export default function Features() {
             .slice(0, 6) // Curated premium list for the homepage
             .map((feature, i) => {
               // Resolve Lucide Icon dynamically
-              const IconComponent =
+              const isSvgIcon = feature.iconName && (
+                feature.iconName.trim().toLowerCase().startsWith('<svg') || 
+                feature.iconName.toLowerCase().includes('<svg') || 
+                feature.iconName.toLowerCase().includes('xmlns=') ||
+                (feature.iconName.trim().startsWith('<') && feature.iconName.toLowerCase().includes('svg'))
+              );
+              const IconComponent = !isSvgIcon ? (
                 (Icons as any)[feature.iconName] ||
                 (Icons as any)[feature.iconName.replace(/\s+/g, '')] ||
-                Icons.Settings;
+                Icons.Settings
+              ) : null;
               
               const isExpanded = !!expandedIds[feature.id];
 
@@ -96,7 +103,14 @@ export default function Features() {
                     <div className="flex items-center gap-3">
                       {/* Gradient wrapped icon container */}
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br ${feature.color || 'from-blue-500 to-indigo-500'} bg-opacity-20 shadow-md relative z-10`}>
-                        <IconComponent className="w-5 h-5 text-white drop-shadow" />
+                        {isSvgIcon ? (
+                          <div 
+                            className="w-5 h-5 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:stroke-[2] text-white"
+                            dangerouslySetInnerHTML={{ __html: feature.iconName }}
+                          />
+                        ) : (
+                          IconComponent && <IconComponent className="w-5 h-5 text-white drop-shadow" />
+                        )}
                       </div>
                       
                       <h3 className="text-base sm:text-lg font-bold text-white tracking-tight group-hover:text-blue-400 transition-colors duration-200">
