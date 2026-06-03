@@ -75,6 +75,7 @@ interface DataContextType {
   resetToDefaults: () => Promise<void>;
   incrementDownload: () => Promise<void>;
   incrementVisit: () => Promise<void>;
+  updateStatsCounts: (visits: number, downloads: number) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -91,18 +92,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [downloadsCount, setDownloadsCount] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('poststatus_downloads');
-      return saved ? parseInt(saved, 10) : 1248;
+      return saved ? parseInt(saved, 10) : 0;
     } catch {
-      return 1248;
+      return 0;
     }
   });
   
   const [visitsCount, setVisitsCount] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('poststatus_visits');
-      return saved ? parseInt(saved, 10) : 3482;
+      return saved ? parseInt(saved, 10) : 0;
     } catch {
-      return 3482;
+      return 0;
     }
   });
 
@@ -122,6 +123,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setDoc(doc(db, 'settings', 'stats'), { visitsCount: next }, { merge: true }).catch(() => {});
       return next;
     });
+  };
+
+  const updateStatsCounts = async (visits: number, downloads: number) => {
+    setVisitsCount(visits);
+    setDownloadsCount(downloads);
+    try {
+      localStorage.setItem('poststatus_visits', String(visits));
+      localStorage.setItem('poststatus_downloads', String(downloads));
+      await setDoc(doc(db, 'settings', 'stats'), { 
+        visitsCount: visits, 
+        downloadsCount: downloads 
+      }, { merge: true });
+    } catch (e) {
+      console.warn("Storage update warnings bypassed.", e);
+    }
   };
 
   // Check and bootstrap Firestore with initial defaults if empty
@@ -395,7 +411,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       deleteFAQ,
       resetToDefaults,
       incrementDownload,
-      incrementVisit
+      incrementVisit,
+      updateStatsCounts
     }}>
       {children}
     </DataContext.Provider>

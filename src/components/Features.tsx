@@ -92,7 +92,7 @@ export default function Features() {
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.05 }}
                   onClick={() => toggleExpand(feature.id)}
-                  className="group p-6 sm:p-8 rounded-2xl bg-[#0f172a]/60 backdrop-blur-md border border-slate-800 hover:border-slate-700/80 transition-[border-color,box-shadow] duration-300 flex flex-col relative overflow-hidden select-none hover:shadow-[0_0_30px_rgba(59,130,246,0.15)] cursor-pointer"
+                  className="group p-6 sm:p-8 rounded-2xl bg-slate-900/60 backdrop-blur-md border border-slate-800 hover:border-slate-700/80 transition-[border-color,box-shadow] duration-300 flex flex-col relative overflow-hidden select-none hover:shadow-[0_0_30px_rgba(59,130,246,0.15)] cursor-pointer"
                 >
                   {/* Subtle top indicator hover line */}
                   <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -164,7 +164,7 @@ export default function Features() {
                                 <span className="block text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-2 font-mono">
                                   USE CASE
                                 </span>
-                                <p className="text-xs sm:text-sm font-medium text-slate-300 leading-relaxed bg-[#020617]/50 p-3.5 rounded-xl border border-slate-800/40">
+                                <p className="text-xs sm:text-sm font-medium text-slate-300 leading-relaxed bg-slate-950/50 p-3.5 rounded-xl border border-slate-800/40">
                                   {feature.useCase || 'Seamless dynamic integration across WooCommerce default grids.'}
                                 </p>
                               </div>
@@ -204,7 +204,7 @@ export default function Features() {
             initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="inline-block p-1 rounded-2xl bg-[#0a0f1d] border border-slate-850 shadow-2xl"
+            className="inline-block p-1 rounded-2xl bg-slate-950 border border-slate-850 shadow-2xl"
           >
             <div className="px-6 py-6 sm:px-12 sm:py-8 text-center max-w-2xl">
               <span className="text-xs font-mono font-bold tracking-widest text-[#3b82f6] uppercase block mb-2">

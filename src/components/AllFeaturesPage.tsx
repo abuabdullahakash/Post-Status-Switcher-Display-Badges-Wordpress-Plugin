@@ -205,7 +205,7 @@ export default function AllFeaturesPage({ onBack, onNavigateToFeature }: AllFeat
         </div>
 
         {/* Dynamic version index notification ticker */}
-        <div className="mb-10 p-4 rounded-xl bg-[#090d16]/80 border border-slate-800/80 backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="mb-10 p-4 rounded-xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
               <Icons.ShieldCheck className="w-4.5 h-4.5" />
@@ -237,7 +237,7 @@ export default function AllFeaturesPage({ onBack, onNavigateToFeature }: AllFeat
                 placeholder="Search across titles, descriptions, formulas or specific custom use cases..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-11 pr-4 py-3.5 bg-[#0b0f19] border border-slate-800 rounded-2xl text-white placeholder-slate-450 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all shadow-inner text-sm"
+                className="block w-full pl-11 pr-4 py-3.5 bg-slate-950 border border-slate-800 rounded-2xl text-white placeholder-slate-450 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all shadow-inner text-sm"
               />
               {searchQuery && (
                 <button
@@ -279,7 +279,7 @@ export default function AllFeaturesPage({ onBack, onNavigateToFeature }: AllFeat
                       exit={{ opacity: 0, scale: 0.98 }}
                       transition={{ duration: 0.25 }}
                       onClick={() => toggleExpand(feature.id)}
-                      className="group p-5 rounded-2xl bg-[#0f172a]/40 hover:bg-[#0f172a]/70 border border-slate-800 hover:border-slate-700/80 transition-all duration-200 cursor-pointer overflow-hidden relative select-none"
+                      className="group p-5 rounded-2xl bg-slate-900/40 hover:bg-slate-900/70 border border-slate-800 hover:border-slate-700/80 transition-all duration-200 cursor-pointer overflow-hidden relative select-none"
                     >
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
@@ -554,7 +554,7 @@ export default function AllFeaturesPage({ onBack, onNavigateToFeature }: AllFeat
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="absolute inset-0 bg-[#070b13] flex flex-col items-center justify-center text-center p-4 z-20"
+                    className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center text-center p-4 z-20"
                   >
                     <Icons.CheckCircle className="w-10 h-10 text-emerald-400 mb-2" />
                     <h4 className="text-xs font-bold text-white mb-1">Proposal Registered!</h4>
@@ -587,7 +587,7 @@ export default function AllFeaturesPage({ onBack, onNavigateToFeature }: AllFeat
             )}
 
             {/* Section 4: Telemetry Stats */}
-            <div className="p-5 rounded-2xl bg-[#080c14]/50 border border-slate-900/80 space-y-4">
+            <div className="p-5 rounded-2xl bg-slate-900/50 border border-slate-900/80 space-y-4">
               <h3 className="text-xs font-mono font-bold tracking-widest text-slate-450 uppercase flex items-center gap-1.5">
                 <Icons.Activity className="w-3.5 h-3.5 text-blue-400" />
                 <span>INDEX METRICS</span>

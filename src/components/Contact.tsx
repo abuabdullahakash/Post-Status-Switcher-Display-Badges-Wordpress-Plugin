@@ -185,10 +185,10 @@ export default function Contact() {
                 </p>
                 <a 
                   href="mailto:abuabdullahakash@gmail.com" 
-                  className="font-mono text-sm text-blue-450 hover:text-blue-300 transition-colors font-medium flex items-center gap-1"
+                  className="font-mono text-sm text-blue-400 hover:text-blue-300 transition-colors font-medium flex items-center gap-1.5 w-fit group"
                 >
-                  abuabdullahakash@gmail.com
-                  <ArrowRight className="w-3 h-3" />
+                  <span>abuabdullahakash@gmail.com</span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                 </a>
               </div>
 
@@ -202,9 +202,15 @@ export default function Contact() {
                 <p className="text-xs text-slate-400 leading-relaxed font-light mb-3">
                   Active subscribers check our direct call line or raise high-priority WhatsApp workflows.
                 </p>
-                <span className="font-mono text-sm text-slate-300 font-medium block">
-                  01935136915
-                </span>
+                <a 
+                  href="https://wa.me/8801935136915"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-sm text-emerald-400 hover:text-emerald-300 transition-colors font-medium flex items-center gap-1.5 w-fit group"
+                >
+                  <span>01935136915 (WhatsApp)</span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                </a>
               </div>
 
               <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-900 hover:border-slate-800/80 transition-all duration-300 shadow-md">

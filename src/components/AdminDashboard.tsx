@@ -38,8 +38,79 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const { 
     features, pricingPlans, faqs, settings, isBootstrapping,
     updateFeature, addFeature, deleteFeature, updatePricingPlan, updateSettings, addFAQ, updateFAQ, deleteFAQ, resetToDefaults,
-    downloadsCount, visitsCount
+    downloadsCount, visitsCount, updateStatsCounts
   } = useData();
+
+  // Define baseline active tracking data scaled dynamically with Firestore counts
+  const visitVals = [
+    Math.round(visitsCount * 0.12), // Mon
+    Math.round(visitsCount * 0.15), // Tue
+    Math.round(visitsCount * 0.13), // Wed
+    Math.round(visitsCount * 0.17), // Thu
+    Math.round(visitsCount * 0.19), // Fri
+    Math.round(visitsCount * 0.10), // Sat
+    Math.round(visitsCount * 0.14), // Sun (Today)
+  ];
+
+  const downloadVals = [
+    Math.round(downloadsCount * 0.11), // Mon
+    Math.round(downloadsCount * 0.13), // Tue
+    Math.round(downloadsCount * 0.15), // Wed
+    Math.round(downloadsCount * 0.12), // Thu
+    Math.round(downloadsCount * 0.18), // Fri
+    Math.round(downloadsCount * 0.09), // Sat
+    Math.round(downloadsCount * 0.22), // Sun (Today)
+  ];
+
+  const maxVisit = Math.max(...visitVals, 1);
+  const maxDownload = Math.max(...downloadVals, 1);
+
+  // Map a value to a Y coordinate (0 matches Y=210, peak matches Y=35)
+  const getYVisits = (val: number) => {
+    const ratio = val / maxVisit; // ranges from 0 to 1
+    return 210 - (ratio * 155 + 20); // range from Y=190 to Y=35
+  };
+
+  const getYDownloads = (val: number) => {
+    const ratio = val / maxDownload;
+    return 210 - (ratio * 145 + 15); // slightly lower peak so they cross beautifully
+  };
+
+  const yv0 = getYVisits(visitVals[0]); // Mon (x = 60)
+  const yv1 = getYVisits(visitVals[1]); // Tue (x = 160)
+  const yv2 = getYVisits(visitVals[2]); // Wed (x = 260)
+  const yv3 = getYVisits(visitVals[3]); // Thu (x = 360)
+  const yv4 = getYVisits(visitVals[4]); // Fri (x = 460)
+  const yv5 = getYVisits(visitVals[5]); // Sat (x = 560)
+  const yv6 = getYVisits(visitVals[6]); // Sun (x = 660)
+
+  const yd0 = getYDownloads(downloadVals[0]); // Mon (x = 60)
+  const yd1 = getYDownloads(downloadVals[1]); // Tue (x = 160)
+  const yd2 = getYDownloads(downloadVals[2]); // Wed (x = 260)
+  const yd3 = getYDownloads(downloadVals[3]); // Thu (x = 360)
+  const yd4 = getYDownloads(downloadVals[4]); // Fri (x = 460)
+  const yd5 = getYDownloads(downloadVals[5]); // Sat (x = 560)
+  const yd6 = getYDownloads(downloadVals[6]); // Sun (x = 660)
+
+  const visitsPath = `M 60 ${yv0} 
+    C 110 ${yv0}, 110 ${yv1}, 160 ${yv1} 
+    C 210 ${yv1}, 210 ${yv2}, 260 ${yv2} 
+    C 310 ${yv2}, 310 ${yv3}, 360 ${yv3} 
+    C 410 ${yv3}, 410 ${yv4}, 460 ${yv4} 
+    C 510 ${yv4}, 510 ${yv5}, 560 ${yv5} 
+    C 610 ${yv5}, 610 ${yv6}, 660 ${yv6}`;
+
+  const visitsAreaPath = `${visitsPath} L 660 210 L 60 210 Z`;
+
+  const downloadsPath = `M 60 ${yd0} 
+    C 110 ${yd0}, 110 ${yd1}, 160 ${yd1} 
+    C 210 ${yd1}, 210 ${yd2}, 260 ${yd2} 
+    C 310 ${yd2}, 310 ${yd3}, 360 ${yd3} 
+    C 410 ${yd3}, 410 ${yd4}, 460 ${yd4} 
+    C 510 ${yd4}, 510 ${yd5}, 560 ${yd5} 
+    C 610 ${yd5}, 610 ${yd6}, 660 ${yd6}`;
+
+  const downloadsAreaPath = `${downloadsPath} L 660 210 L 60 210 Z`;
 
   const pendingCreates = features.filter(f => f.pendingApproval === 'create');
   const pendingUpdates = features.filter(f => f.pendingApproval === 'update');
@@ -87,6 +158,15 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [showPendingCreatesModal, setShowPendingCreatesModal] = useState(false);
   const [showUpdateDiffModal, setShowUpdateDiffModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+
+  const [tuningVisits, setTuningVisits] = useState<string>('');
+  const [tuningDownloads, setTuningDownloads] = useState<string>('');
+  const [isUpdatingStats, setIsUpdatingStats] = useState(false);
+
+  useEffect(() => {
+    setTuningVisits(String(visitsCount));
+    setTuningDownloads(String(downloadsCount));
+  }, [visitsCount, downloadsCount]);
   const [selectedFeatureForUpdateDiff, setSelectedFeatureForUpdateDiff] = useState<Feature | null>(null);
   
   // Create / Edit states
@@ -240,6 +320,29 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
       setLocalAdmin(null);
     } catch (err) {
       console.error("Sign out error:", err);
+    }
+  };
+
+  const handleSaveTunedStats = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const v = parseInt(tuningVisits, 10);
+    const d = parseInt(tuningDownloads, 10);
+    if (isNaN(v) || isNaN(d) || v < 0 || d < 0) {
+      setToast({ message: "Please enter valid non-negative numbers", type: 'error' });
+      return;
+    }
+    
+    setIsUpdatingStats(true);
+    try {
+      await updateStatsCounts(v, d);
+      await logAdminAction('update_stats', 'Tuning', `Updated live website counters manually. Visits: ${v}, Downloads: ${d}.`);
+      setToast({ message: "Live database counter stats updated successfully!", type: 'success' });
+      setTimeout(() => setToast(null), 3000);
+    } catch (err) {
+      setToast({ message: "Failed to update counters in database", type: 'error' });
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setIsUpdatingStats(false);
     }
   };
 
@@ -1119,6 +1222,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                     <p className="text-slate-400 text-[10px] truncate">{(user?.email || "mdakash136915@gmail.com")}</p>
                   </div>
                 </div>
+
                 <button 
                   onClick={handleSignOut}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-950 text-xs transition-colors cursor-pointer"
@@ -1309,24 +1413,11 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
 
                         {/* Dynamic spline for visits (calculated relative to visitsCount scalar) */}
                         <path 
-                          d={`M 60 ${210 - Math.min(180, (visitsCount * 0.12))} 
-                             C 110 ${210 - Math.min(180, (visitsCount * 0.17))}, 110 ${210 - Math.min(180, (visitsCount * 0.08))}, 160 ${210 - Math.min(180, (visitsCount * 0.14))} 
-                             C 210 ${210 - Math.min(180, (visitsCount * 0.19))}, 210 ${210 - Math.min(180, (visitsCount * 0.09))}, 260 ${210 - Math.min(180, (visitsCount * 0.16))} 
-                             C 310 ${210 - Math.min(180, (visitsCount * 0.22))}, 310 ${210 - Math.min(180, (visitsCount * 0.12))}, 360 ${210 - Math.min(180, (visitsCount * 0.2))} 
-                             C 410 ${210 - Math.min(180, (visitsCount * 0.27))}, 410 ${210 - Math.min(180, (visitsCount * 0.14))}, 460 ${210 - Math.min(180, (visitsCount * 0.22))} 
-                             C 510 ${210 - Math.min(180, (visitsCount * 0.3))}, 510 ${210 - Math.min(180, (visitsCount * 0.16))}, 560 ${210 - Math.min(180, (visitsCount * 0.26))} 
-                             C 610 ${210 - Math.min(180, (visitsCount * 0.35))}, 610 ${210 - Math.min(180, (visitsCount * 0.22))}, 660 ${210 - Math.min(180, (visitsCount * 0.3))}
-                             L 660 210 L 60 210 Z`}
+                          d={visitsAreaPath}
                           fill="url(#visitsGrad)"
                         />
                         <path 
-                          d={`M 60 ${210 - Math.min(180, (visitsCount * 0.12))} 
-                             C 110 ${210 - Math.min(180, (visitsCount * 0.17))}, 110 ${210 - Math.min(180, (visitsCount * 0.08))}, 160 ${210 - Math.min(180, (visitsCount * 0.14))} 
-                             C 210 ${210 - Math.min(180, (visitsCount * 0.19))}, 210 ${210 - Math.min(180, (visitsCount * 0.09))}, 260 ${210 - Math.min(180, (visitsCount * 0.16))} 
-                             C 310 ${210 - Math.min(180, (visitsCount * 0.22))}, 310 ${210 - Math.min(180, (visitsCount * 0.12))}, 360 ${210 - Math.min(180, (visitsCount * 0.2))} 
-                             C 410 ${210 - Math.min(180, (visitsCount * 0.27))}, 410 ${210 - Math.min(180, (visitsCount * 0.14))}, 460 ${210 - Math.min(180, (visitsCount * 0.22))} 
-                             C 510 ${210 - Math.min(180, (visitsCount * 0.3))}, 510 ${210 - Math.min(180, (visitsCount * 0.16))}, 560 ${210 - Math.min(180, (visitsCount * 0.26))} 
-                             C 610 ${210 - Math.min(180, (visitsCount * 0.35))}, 610 ${210 - Math.min(180, (visitsCount * 0.22))}, 660 ${210 - Math.min(180, (visitsCount * 0.3))}`}
+                          d={visitsPath}
                           fill="none"
                           stroke="#3b82f6"
                           strokeWidth="3.5"
@@ -1335,40 +1426,43 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
 
                         {/* Dynamic spline for downloads */}
                         <path 
-                          d={`M 60 ${210 - Math.min(180, (downloadsCount * 0.15))} 
-                             C 110 ${210 - Math.min(180, (downloadsCount * 0.2))}, 110 ${210 - Math.min(180, (downloadsCount * 0.07))}, 160 ${210 - Math.min(180, (downloadsCount * 0.17))} 
-                             C 210 ${210 - Math.min(180, (downloadsCount * 0.23))}, 210 ${210 - Math.min(180, (downloadsCount * 0.1))}, 260 ${210 - Math.min(180, (downloadsCount * 0.21))} 
-                             C 310 ${210 - Math.min(180, (downloadsCount * 0.29))}, 310 ${210 - Math.min(180, (downloadsCount * 0.13))}, 360 ${210 - Math.min(180, (downloadsCount * 0.25))} 
-                             C 410 ${210 - Math.min(180, (downloadsCount * 0.34))}, 410 ${210 - Math.min(180, (downloadsCount * 0.15))}, 460 ${210 - Math.min(180, (downloadsCount * 0.28))} 
-                             C 510 ${210 - Math.min(180, (downloadsCount * 0.4))}, 510 ${210 - Math.min(180, (downloadsCount * 0.18))}, 560 ${210 - Math.min(180, (downloadsCount * 0.33))} 
-                             C 610 ${210 - Math.min(180, (downloadsCount * 0.44))}, 610 ${210 - Math.min(180, (downloadsCount * 0.25))}, 660 ${210 - Math.min(180, (downloadsCount * 0.38))}
-                             L 660 210 L 60 210 Z`}
+                          d={downloadsAreaPath}
                           fill="url(#downloadsGrad)"
                         />
                         <path 
-                          d={`M 60 ${210 - Math.min(180, (downloadsCount * 0.15))} 
-                             C 110 ${210 - Math.min(180, (downloadsCount * 0.2))}, 110 ${210 - Math.min(180, (downloadsCount * 0.07))}, 160 ${210 - Math.min(180, (downloadsCount * 0.17))} 
-                             C 210 ${210 - Math.min(180, (downloadsCount * 0.23))}, 210 ${210 - Math.min(180, (downloadsCount * 0.1))}, 260 ${210 - Math.min(180, (downloadsCount * 0.21))} 
-                             C 310 ${210 - Math.min(180, (downloadsCount * 0.29))}, 310 ${210 - Math.min(180, (downloadsCount * 0.13))}, 360 ${210 - Math.min(180, (downloadsCount * 0.25))} 
-                             C 410 ${210 - Math.min(180, (downloadsCount * 0.34))}, 410 ${210 - Math.min(180, (downloadsCount * 0.15))}, 460 ${210 - Math.min(180, (downloadsCount * 0.28))} 
-                             C 510 ${210 - Math.min(180, (downloadsCount * 0.4))}, 510 ${210 - Math.min(180, (downloadsCount * 0.18))}, 560 ${210 - Math.min(180, (downloadsCount * 0.33))} 
-                             C 610 ${210 - Math.min(180, (downloadsCount * 0.44))}, 610 ${210 - Math.min(180, (downloadsCount * 0.25))}, 660 ${210 - Math.min(180, (downloadsCount * 0.38))}`}
+                          d={downloadsPath}
                           fill="none"
                           stroke="#10b981"
                           strokeWidth="3.5"
                           strokeLinecap="round"
                         />
 
-                        {/* Points anchors */}
-                        <circle cx="60" cy={210 - Math.min(180, (visitsCount * 0.12))} r="4" fill="#3b82f6" stroke="#090d16" strokeWidth="2.5" />
-                        <circle cx="260" cy={210 - Math.min(180, (visitsCount * 0.16))} r="4" fill="#3b82f6" stroke="#090d16" strokeWidth="2.5" />
-                        <circle cx="460" cy={210 - Math.min(180, (visitsCount * 0.22))} r="4" fill="#3b82f6" stroke="#090d16" strokeWidth="2.5" />
-                        <circle cx="660" cy={210 - Math.min(180, (visitsCount * 0.3))} r="4" fill="#3b82f6" stroke="#090d16" strokeWidth="2.5" />
+                        {/* Points anchors with interactive value tips */}
+                        {visitVals.map((val, idx) => {
+                          const x = 60 + idx * 100;
+                          const y = getYVisits(val);
+                          return (
+                            <g key={`v-val-${idx}`} className="group/node cursor-pointer">
+                              <circle cx={x} cy={y} r="4.5" fill="#3b82f6" stroke="#090d16" strokeWidth="2.5" className="transition-all duration-200 group-hover/node:r-6 group-hover/node:fill-white" />
+                              <text x={x} y={y - 12} className="text-[10px] font-sans font-bold fill-blue-400 opacity-0 group-hover/node:opacity-100 transition-opacity duration-200 pointer-events-none drop-shadow" textAnchor="middle">
+                                {val}
+                              </text>
+                            </g>
+                          );
+                        })}
 
-                        <circle cx="60" cy={210 - Math.min(180, (downloadsCount * 0.15))} r="4" fill="#10b981" stroke="#090d16" strokeWidth="2.5" />
-                        <circle cx="260" cy={210 - Math.min(180, (downloadsCount * 0.21))} r="4" fill="#10b981" stroke="#090d16" strokeWidth="2.5" />
-                        <circle cx="460" cy={210 - Math.min(180, (downloadsCount * 0.28))} r="4" fill="#10b981" stroke="#090d16" strokeWidth="2.5" />
-                        <circle cx="660" cy={210 - Math.min(180, (downloadsCount * 0.38))} r="4" fill="#10b981" stroke="#090d16" strokeWidth="2.5" />
+                        {downloadVals.map((val, idx) => {
+                          const x = 60 + idx * 100;
+                          const y = getYDownloads(val);
+                          return (
+                            <g key={`d-val-${idx}`} className="group/node cursor-pointer">
+                              <circle cx={x} cy={y} r="4.5" fill="#10b981" stroke="#090d16" strokeWidth="2.5" className="transition-all duration-200 group-hover/node:r-6 group-hover/node:fill-white" />
+                              <text x={x} y={y - 12} className="text-[10px] font-sans font-bold fill-emerald-400 opacity-0 group-hover/node:opacity-100 transition-opacity duration-200 pointer-events-none drop-shadow" textAnchor="middle">
+                                {val}
+                              </text>
+                            </g>
+                          );
+                        })}
 
                         {/* X-Axis Labels */}
                         <text x="60" y="228" className="text-[9px] font-mono fill-slate-400 text-center" textAnchor="middle">Mon</text>
@@ -1392,6 +1486,104 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                       <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-[10px] text-slate-400 font-mono shrink-0">
                         Admin: <span className="text-white font-sans font-semibold">mdakash136915@gmail.com</span>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Real-time Traffic Counters Tuner */}
+                  <div className="p-6 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-900 shadow-xl space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-450">
+                        <Icons.Sliders className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="font-display font-semibold text-white text-base">Database Statistics Tuning</h4>
+                        <p className="text-xs text-slate-400 mt-0.5">Control the exact real-time visitor and download counts stored in Firestore.</p>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleSaveTunedStats} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end bg-slate-950/50 p-4 rounded-xl border border-slate-900">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 font-sans">Website Visitors Count</label>
+                        <div className="relative">
+                          <Icons.Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                          <input
+                            type="number"
+                            min="0"
+                            value={tuningVisits}
+                            onChange={(e) => setTuningVisits(e.target.value)}
+                            placeholder="0"
+                            className="w-full pl-10 pr-4 py-2 bg-slate-900 text-white rounded-lg border border-slate-800 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 font-semibold font-mono"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 font-sans">Plugin Downloads Count</label>
+                        <div className="relative">
+                          <Icons.ArrowDownToLine className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                          <input
+                            type="number"
+                            min="0"
+                            value={tuningDownloads}
+                            onChange={(e) => setTuningDownloads(e.target.value)}
+                            placeholder="0"
+                            className="w-full pl-10 pr-4 py-2 bg-slate-900 text-white rounded-lg border border-slate-800 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 font-semibold font-mono"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <button
+                          type="submit"
+                          disabled={isUpdatingStats}
+                          className="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-550 hover:to-teal-555 text-white font-bold text-xs rounded-lg transition-all active:scale-[98%] cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/30 font-sans"
+                        >
+                          {isUpdatingStats ? (
+                            <Icons.RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Icons.Check className="w-3.5 h-3.5" />
+                          )}
+                          Apply Custom Counts
+                        </button>
+                      </div>
+                    </form>
+
+                    <div className="flex gap-2.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (window.confirm("Are you sure you want to reset both statistics back to exactly 0? This will override your current database values.")) {
+                            setTuningVisits("0");
+                            setTuningDownloads("0");
+                            if (updateStatsCounts) {
+                              setIsUpdatingStats(true);
+                              try {
+                                await updateStatsCounts(0, 0);
+                                setToast({ message: "Counter stats reset to 0 in database!", type: "success" });
+                                setTimeout(() => setToast(null), 3000);
+                              } catch {
+                                setToast({ message: "Failed to reset stats", type: "error" });
+                              } finally {
+                                setIsUpdatingStats(false);
+                              }
+                            }
+                          }
+                        }}
+                        className="py-1.5 px-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-350 border border-rose-500/20 text-[10px] uppercase tracking-wider font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1 font-sans"
+                      >
+                        <Icons.Trash2 className="w-3 h-3" /> Reset Both Counters to 0
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTuningVisits("1");
+                          setTuningDownloads("1");
+                        }}
+                        className="py-1.5 px-3 bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-300 text-[10px] uppercase tracking-wider font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1 font-sans"
+                      >
+                        <Icons.RotateCcw className="w-3 h-3" /> Set Baseline to 1
+                      </button>
                     </div>
                   </div>
 
