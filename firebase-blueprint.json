@@ -63,6 +63,51 @@
         "adminEmail": { "type": "string" }
       },
       "required": ["id", "siteName", "siteDescription", "heroTitle", "heroSubtitle", "heroDescription"]
+    },
+    "integration": {
+      "title": "Ecosystem Partner Integration",
+      "description": "Compatibility details for a third-party WP framework or plugin.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "badge": { "type": "string" },
+        "description": { "type": "string" },
+        "testedVersion": { "type": "string" },
+        "active": { "type": "boolean" },
+        "order": { "type": "number" }
+      },
+      "required": ["id", "name", "subtitle", "badge", "description", "testedVersion", "active", "order"]
+    },
+    "contact": {
+      "title": "Contact Submission",
+      "description": "Information about support tickets and contact form submissions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "serverDispatchSecret": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "message"]
+    },
+    "auditLog": {
+      "title": "Administrative Audit Log",
+      "description": "Records administrative dashboard active state changes and resets.",
+      "type": "object",
+      "properties": {
+        "actionType": { "type": "string" },
+        "actionCategory": { "type": "string" },
+        "details": { "type": "string" },
+        "actor": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["actionType", "actionCategory", "details", "timestamp"]
     }
   },
   "firestore": {
@@ -81,6 +126,18 @@
     "/settings/{settingId}": {
       "schema": { "$ref": "#/entities/setting" },
       "description": "Collection of settings (usually just 'global' doc)"
+    },
+    "/integrations/{integrationId}": {
+      "schema": { "$ref": "#/entities/integration" },
+      "description": "Collection of plugin ecosystem partnerships"
+    },
+    "/contacts/{contactId}": {
+      "schema": { "$ref": "#/entities/contact" },
+      "description": "Collection of contact forms and inquiries"
+    },
+    "/auditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/auditLog" },
+      "description": "Collection of administrative audit log actions"
     }
   }
 }

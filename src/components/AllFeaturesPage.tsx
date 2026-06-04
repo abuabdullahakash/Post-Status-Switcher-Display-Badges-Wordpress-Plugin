@@ -200,7 +200,7 @@ export default function AllFeaturesPage({ onBack, onNavigateToFeature }: AllFeat
             Modules Explorer Index
           </h1>
           <p className="text-base sm:text-lg text-slate-400 max-w-3xl leading-relaxed">
-            Search, filter, and review our comprehensive registry of over <strong className="text-white font-semibold">1,000+ custom switcher configurations</strong> tailored perfectly for WordPress meta queries, Gutenberg, WooCommerce, and JetEngine frameworks.
+            Search, filter, and review our comprehensive registry of over <strong className="text-white font-semibold">{features.filter(f => f.active).length} custom switcher configurations</strong> tailored perfectly for WordPress meta queries, Gutenberg, WooCommerce, and JetEngine frameworks.
           </p>
         </div>
 
@@ -461,7 +461,7 @@ export default function AllFeaturesPage({ onBack, onNavigateToFeature }: AllFeat
                 <span>Request Custom Module</span>
               </h3>
               <p className="text-xs text-slate-450 mb-4 leading-relaxed">
-                Need a specific WordPress status switcher or metadata rule logic? Add it below and we will automatically build it into the 1,000+ roster!
+                Need a specific WordPress status switcher or metadata rule logic? Add it below and we will automatically build it into the active roster of {features.filter(f => f.active).length} features!
               </p>
 
               <form onSubmit={handleRequestSubmit} className="space-y-3">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
+import Integrations from './components/Integrations';
 import Features from './components/Features';
 import Documentation from './components/Documentation';
 import Pricing from './components/Pricing';
@@ -103,6 +104,7 @@ export default function App() {
             ) : (
               <>
                 <Hero />
+                <Integrations />
                 <Features />
                 <Documentation />
                 <Pricing />

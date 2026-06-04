@@ -1,4 +1,4 @@
-import { Feature, PricingPlan, FAQItem, SiteSettings } from '../types';
+import { Feature, PricingPlan, FAQItem, SiteSettings, Integration } from '../types';
 
 export const DEFAULT_FEATURES: Feature[] = [
   {
@@ -376,3 +376,47 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   statusModalTitle: 'Website Development Under Construction',
   statusModalMessage: 'Our website configuration is currently under active development and will be completed very soon. However, you are absolutely welcome to browse and download our premium plugins to start using them directly in your projects right now!\n\nIf you need any setup assistance or have questions about using our plugins, please head down to the Contact Section of this page to communicate directly with us. We will be absolutely delighted to support you!'
 };
+
+export const DEFAULT_INTEGRATIONS: Integration[] = [
+  {
+    id: 'jetengine',
+    name: 'CrocoBlock JetEngine',
+    subtitle: 'Dynamic Query Builder Addon',
+    badge: 'Native Integration',
+    description: 'Unlock visual logic inside JetEngine Query Builder. Allows you to effortlessly construct complex meta queries, custom content types, and relation grids based on post state switches.',
+    testedVersion: 'v3.2+',
+    active: true,
+    order: 1
+  },
+  {
+    id: 'woocommerce',
+    name: 'WooCommerce',
+    subtitle: 'Product State Toggles & Badges',
+    badge: 'Certified Compatibility',
+    description: 'Enrich product listings and grids with interactive badges. Update real-time status switches for stock status, discount offers, backorders, or special Deals of the Day dynamically.',
+    testedVersion: 'v8.0+',
+    active: true,
+    order: 2
+  },
+  {
+    id: 'elementor',
+    name: 'Elementor Pro',
+    subtitle: 'Dynamic Tag Rendering',
+    badge: 'No-Code Workflow',
+    description: 'Provides native Elementor Dynamic Tags out of the box. Use Elementor\'s visual design system to completely style and render post states, display badges, and switch triggers without writing single lines of CSS.',
+    testedVersion: 'v3.18+',
+    active: true,
+    order: 3
+  },
+  {
+    id: 'cpt',
+    name: 'Custom Post Type UI (CPT)',
+    subtitle: 'Custom Post State Switching',
+    badge: 'Core Infrastructure',
+    description: 'Fully supports any custom post type. Whether you are listing real estate properties, automotive dealership vehicles, or event tickers, instantly register custom switcher states in CPT UI Admin Tables.',
+    testedVersion: 'v1.15+',
+    active: true,
+    order: 4
+  }
+];
+

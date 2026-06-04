@@ -8,9 +8,19 @@ interface ImageUploaderProps {
   className?: string;
   presetUrl?: string;
   compact?: boolean;
+  clearOnSuccess?: boolean;
+  historyKey?: string;
 }
 
-export default function ImageUploader({ onUploadSuccess, label, className = "", presetUrl, compact = false }: ImageUploaderProps) {
+export default function ImageUploader({ 
+  onUploadSuccess, 
+  label, 
+  className = "", 
+  presetUrl, 
+  compact = false,
+  clearOnSuccess = false,
+  historyKey
+}: ImageUploaderProps) {
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -18,7 +28,7 @@ export default function ImageUploader({ onUploadSuccess, label, className = "", 
   const [copied, setCopied] = useState(false);
   const [recentUploads, setRecentUploads] = useState<string[]>(() => {
     try {
-      const saved = localStorage.getItem('post_status_recent_uploads');
+      const saved = localStorage.getItem(historyKey || 'post_status_recent_uploads');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -38,11 +48,11 @@ export default function ImageUploader({ onUploadSuccess, label, className = "", 
   // Save recent uploads to localStorage for persistence across reloads
   useEffect(() => {
     try {
-      localStorage.setItem('post_status_recent_uploads', JSON.stringify(recentUploads));
+      localStorage.setItem(historyKey || 'post_status_recent_uploads', JSON.stringify(recentUploads));
     } catch (e) {
       console.warn("Storage write failed.", e);
     }
-  }, [recentUploads]);
+  }, [recentUploads, historyKey]);
 
   // Listener to intercept Ctrl+V image pastes in a scoped manner
   useEffect(() => {
@@ -109,7 +119,11 @@ export default function ImageUploader({ onUploadSuccess, label, className = "", 
       
       if (data && data.success && data.data && data.data.url) {
         const directUrl = data.data.url;
-        setResultUrl(directUrl);
+        if (clearOnSuccess) {
+          setResultUrl(null);
+        } else {
+          setResultUrl(directUrl);
+        }
         setRecentUploads(prev => {
           const filtered = prev.filter(item => item !== directUrl);
           return [directUrl, ...filtered].slice(0, 8); // Keep last 8 images

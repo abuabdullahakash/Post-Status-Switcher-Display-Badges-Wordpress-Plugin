@@ -23,21 +23,6 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
   // Find current feature
   const feature = features.find(f => f.id === featureId);
 
-  // If feature does not exist or is pending creation approval, redirect or show error
-  if (!feature || feature.pendingApproval === 'create') {
-    return (
-      <div className="py-32 text-center bg-slate-950 text-white flex flex-col items-center justify-center min-h-screen">
-        <Icons.AlertOctagon className="w-12 h-12 text-rose-500 mb-4 animate-bounce" />
-        <h2 className="text-2xl font-bold font-display tracking-tight text-white mb-2">Feature Not Available</h2>
-        <p className="text-slate-400 text-sm max-w-sm mb-6 leading-relaxed">This feature page is either unpublished or queued for administrative approval by mdakash136915@gmail.com.</p>
-        <button onClick={onBack} className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-lg active:scale-95 flex items-center gap-1.5 cursor-pointer">
-          <Icons.ArrowLeft className="w-4 h-4" />
-          <span>Return to Showcase</span>
-        </button>
-      </div>
-    );
-  }
-
   // Image gallery configurations & default custom fallbacks
   const fallbackGalleryMap: Record<string, string[]> = {
     'auto-transition': [
@@ -241,6 +226,21 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
         <h3 className="text-xl font-bold">Feature data not found</h3>
         <p className="text-slate-400 mt-2">The selected feature ID "{featureId}" is unavailable or disabled.</p>
         <button onClick={onBack} className="mt-6 px-4 py-2 bg-slate-800 text-white rounded-xl">Back to Homepage</button>
+      </div>
+    );
+  }
+
+  // If feature is pending creation approval, redirect or show error
+  if (feature.pendingApproval === 'create') {
+    return (
+      <div className="py-32 text-center bg-slate-950 text-white flex flex-col items-center justify-center min-h-screen">
+        <Icons.AlertOctagon className="w-12 h-12 text-rose-500 mb-4 animate-bounce" />
+        <h2 className="text-2xl font-bold font-display tracking-tight text-white mb-2">Feature Not Available</h2>
+        <p className="text-slate-400 text-sm max-w-sm mb-6 leading-relaxed">This feature page is either unpublished or queued for administrative approval by mdakash136915@gmail.com.</p>
+        <button onClick={onBack} className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-lg active:scale-95 flex items-center gap-1.5 cursor-pointer">
+          <Icons.ArrowLeft className="w-4 h-4" />
+          <span>Return to Showcase</span>
+        </button>
       </div>
     );
   }
@@ -556,35 +556,52 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
   };
 
   const dynamicCases = [];
-  if (feature.realWorldCase1Title) {
-    dynamicCases.push({
-      title: feature.realWorldCase1Title,
-      subtitle: feature.realWorldCase1Subtitle || "Deployment Setup",
-      description: feature.realWorldCase1Desc || "",
-      tag: feature.realWorldCase1Tag || "Custom Setup"
+  if (feature.realWorldPillars && feature.realWorldPillars.length > 0) {
+    feature.realWorldPillars.forEach(pillar => {
+      if (pillar.title) {
+        dynamicCases.push({
+          title: pillar.title,
+          subtitle: pillar.subtitle || "Deployment Setup",
+          description: pillar.description || "",
+          tag: pillar.tag || "Custom Setup",
+          link: pillar.link || ""
+        });
+      }
     });
-  }
-  if (feature.realWorldCase2Title) {
-    dynamicCases.push({
-      title: feature.realWorldCase2Title,
-      subtitle: feature.realWorldCase2Subtitle || "Deployment Setup",
-      description: feature.realWorldCase2Desc || "",
-      tag: feature.realWorldCase2Tag || "Custom Setup"
-    });
-  }
-  if (feature.realWorldCase3Title) {
-    dynamicCases.push({
-      title: feature.realWorldCase3Title,
-      subtitle: feature.realWorldCase3Subtitle || "Deployment Setup",
-      description: feature.realWorldCase3Desc || "",
-      tag: feature.realWorldCase3Tag || "Custom Setup"
-    });
+  } else {
+    if (feature.realWorldCase1Title) {
+      dynamicCases.push({
+        title: feature.realWorldCase1Title,
+        subtitle: feature.realWorldCase1Subtitle || "Deployment Setup",
+        description: feature.realWorldCase1Desc || "",
+        tag: feature.realWorldCase1Tag || "Custom Setup",
+        link: ""
+      });
+    }
+    if (feature.realWorldCase2Title) {
+      dynamicCases.push({
+        title: feature.realWorldCase2Title,
+        subtitle: feature.realWorldCase2Subtitle || "Deployment Setup",
+        description: feature.realWorldCase2Desc || "",
+        tag: feature.realWorldCase2Tag || "Custom Setup",
+        link: ""
+      });
+    }
+    if (feature.realWorldCase3Title) {
+      dynamicCases.push({
+        title: feature.realWorldCase3Title,
+        subtitle: feature.realWorldCase3Subtitle || "Deployment Setup",
+        description: feature.realWorldCase3Desc || "",
+        tag: feature.realWorldCase3Tag || "Custom Setup",
+        link: ""
+      });
+    }
   }
 
   const currentCases = dynamicCases.length > 0 ? dynamicCases : (realWorldCases[feature.id] || [
-    { title: "Custom Database Lists", subtitle: "Interactive Tracking", description: "Sync document values instantly to represent statuses on cards.", tag: "General CPTs" },
-    { title: "Dynamic Pages Layouts", subtitle: "Rich Visibility", description: "Format layout visibility on elements dynamically centered on specific status keys.", tag: "Layouts Builder" },
-    { title: "Filtered Grids UI", subtitle: "Faceted Sorting", description: "Give customers sorting sliders targeting this specific metadata parameter.", tag: "Smart Filters" }
+    { title: "Custom Database Lists", subtitle: "Interactive Tracking", description: "Sync document values instantly to represent statuses on cards.", tag: "General CPTs", link: "" },
+    { title: "Dynamic Pages Layouts", subtitle: "Rich Visibility", description: "Format layout visibility on elements dynamically centered on specific status keys.", tag: "Layouts Builder", link: "" },
+    { title: "Filtered Grids UI", subtitle: "Faceted Sorting", description: "Give customers sorting sliders targeting this specific metadata parameter.", tag: "Smart Filters", link: "" }
   ]);
 
   // Recommendations: exclude current, get 3 related active ones
@@ -1161,6 +1178,49 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
           {/* Main content body (8 cols on big, 12 on mobile) */}
           <div className="lg:col-span-8 space-y-16">
 
+            {/* 1. DETAILED DOCUMENTATION / FULL DESCRIPTION SECTION (MOVED & ENHANCED) */}
+            <div className="space-y-6 text-left">
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-xl font-display font-black text-white flex items-center gap-2.5 tracking-tight uppercase">
+                    <Icons.FileText className="w-5.5 h-5.5 text-blue-400" />
+                    Plugin Detailed Overview
+                  </h2>
+                  <span className="text-[10px] text-blue-450 bg-blue-950/20 border border-blue-900/40 px-3 py-1 rounded font-mono font-bold tracking-wider uppercase">CPT Active Documentation</span>
+                </div>
+                <p className="text-slate-400 text-sm font-light">Comprehensive description, implementation guidelines, and real-world execution logics of this WordPress active addon module.</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-slate-900/30 to-slate-950/30 border border-slate-900/70 rounded-3xl p-6 md:p-8 shadow-[0_12px_40px_rgba(0,0,0,0.4)] backdrop-blur-md relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 blur-3xl pointer-events-none rounded-full" />
+                
+                {feature.fullDescription ? (
+                  <div className="prose prose-invert max-w-none text-slate-300 text-[13.5px] leading-relaxed space-y-4 font-normal
+                    [&>p]:leading-relaxed [&>p]:text-slate-300 [&>p]:mb-4
+                    [&>strong]:text-white [&>strong]:font-semibold
+                    [&>h1]:text-white [&>h1]:text-base [&>h1]:font-black [&>h1]:my-4 [&>h1]:font-mono [&>h1]:border-b [&>h1]:border-slate-900 [&>h1]:pb-2
+                    [&>h2]:text-slate-100 [&>h2]:text-sm [&>h2]:font-bold [&>h2]:my-3 [&>h2]:font-mono [&>h2]:uppercase [&>h2]:tracking-wider
+                    [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:space-y-2 [&>ul]:my-4 [&>ul>li]:text-slate-300
+                    [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:space-y-2 [&>ol]:my-4 [&>ol>li]:text-slate-300
+                    [&>blockquote]:border-l-4 [&>blockquote]:border-blue-500 [&>blockquote]:pl-4 [&>blockquote]:italic [&>blockquote]:my-5 [&>blockquote]:text-slate-400 [&>blockquote]:bg-slate-950/20 [&>blockquote]:py-2 [&>blockquote]:rounded-r-lg
+                    [&>a]:text-blue-400 [&>a]:hover:underline [&>a]:font-semibold transition-colors
+                    [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-2xl [&_img]:scale-100 hover:[&_img]:scale-[1.01] [&_img]:transition-transform [&_img]:duration-300 [&_img]:my-6 [&_img]:border [&_img]:border-slate-800/80 [&_img]:shadow-2xl [&_img]:mx-auto [&_img]:block"
+                    dangerouslySetInnerHTML={{ __html: feature.fullDescription }}
+                  />
+                ) : (
+                  <div className="space-y-4 text-slate-300 text-[13.5px] leading-relaxed">
+                    <p>{feature.description || "No deep overview specified yet. Run the system administrator panel to customize WordPress parameters with layouts, images, and walkthrough notes."}</p>
+                    {feature.useCase && (
+                      <div className="p-4 rounded-xl bg-blue-950/20 border border-blue-900/35 text-slate-300 italic mt-4 relative">
+                        <strong className="block text-[10px] font-mono uppercase tracking-wider text-blue-400 not-italic mb-1.5 font-bold">WP EXECUTION HOOK TIMING:</strong>
+                        "{feature.useCase}"
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* 1. CUSTOM SCREENSHOT GALLERY SHOWCASE (DYNAMIC EQUAL-SIZED PLOT) */}
             <div id="live-image-gallery" className="scroll-mt-24 space-y-6">
               <div className="flex flex-col gap-2">
@@ -1286,10 +1346,16 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
                       <span className="text-xs text-slate-450 font-medium block">{cs.subtitle}</span>
                       <p className="text-sm text-slate-350 leading-relaxed mt-2 font-light">{cs.description}</p>
                     </div>
-                    <div className="pt-5 mt-6 border-t border-slate-950/60 flex items-center justify-between text-xs font-bold text-blue-400 cursor-pointer hover:text-blue-300 transition-colors">
+                    <a 
+                      href={cs.link ? (cs.link.startsWith('http') ? cs.link : `https://${cs.link}`) : `https://wordpress.org/plugins/search/${encodeURIComponent(feature.title || '')}/`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="pt-5 mt-6 border-t border-slate-950/60 flex items-center justify-between text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors group/setup-link cursor-pointer"
+                    >
                       <span>View live setup</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </div>
+                      <ChevronRight className="w-4 h-4 group-hover/setup-link:translate-x-0.5 transition-transform" />
+                    </a>
                   </div>
                 ))}
               </div>
@@ -1398,17 +1464,31 @@ export default function SingleFeaturePage({ featureId, onBack, onNavigateToFeatu
             <div className="p-6 rounded-2xl bg-slate-900/15 border border-slate-900/70 space-y-5 shadow-xl">
               <h5 className="text-sm font-bold text-slate-200 uppercase tracking-wider">System Compatibility</h5>
               <div className="space-y-4">
-                {[
-                  { name: "JetEngine custom post types", status: "Required ✅" },
-                  { name: "Elementor Page Builder", status: "Optional (Works with Free) ✅" },
-                  { name: "WooCommerce Products integrations", status: feature.id === 'stock-status' ? "Compatible (Direct hooks!) ✅" : "Fully Integrated ✅" },
-                  { name: "Dynamic visibility triggers", status: "Enabled out of the box ✅" }
-                ].map((req, rid) => (
-                  <div key={rid} className="flex justify-between items-start gap-4 text-sm pb-3 border-b border-slate-950/55 last:border-0 last:pb-0">
-                    <span className="text-slate-300 leading-normal font-light">{req.name}</span>
-                    <span className="text-xs bg-slate-955/30 border border-slate-900/80 px-2.5 py-1 rounded text-slate-300 shrink-0 font-mono font-medium">{req.status}</span>
-                  </div>
-                ))}
+                {(feature.systemCompatibility && feature.systemCompatibility.trim() !== '') ? (
+                  feature.systemCompatibility.split('\n').filter(line => line.trim() !== '').map((line, rid) => {
+                    const parts = line.split('|');
+                    const name = parts[0]?.trim() || '';
+                    const status = parts[1]?.trim() || 'Fully Integrated ✅';
+                    return (
+                      <div key={rid} className="flex justify-between items-start gap-4 text-sm pb-3 border-b border-slate-950/55 last:border-0 last:pb-0">
+                        <span className="text-slate-300 leading-normal font-light">{name}</span>
+                        <span className="text-xs bg-slate-955/30 border border-slate-900/80 px-2.5 py-1 rounded text-slate-300 shrink-0 font-mono font-medium">{status}</span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  [
+                    { name: "JetEngine custom post types", status: "Required ✅" },
+                    { name: "Elementor Page Builder", status: "Optional (Works with Free) ✅" },
+                    { name: "WooCommerce Products integrations", status: feature.id === 'stock-status' ? "Compatible (Direct hooks!) ✅" : "Fully Integrated ✅" },
+                    { name: "Dynamic visibility triggers", status: "Enabled out of the box ✅" }
+                  ].map((req, rid) => (
+                    <div key={rid} className="flex justify-between items-start gap-4 text-sm pb-3 border-b border-slate-950/55 last:border-0 last:pb-0">
+                      <span className="text-slate-300 leading-normal font-light">{req.name}</span>
+                      <span className="text-xs bg-slate-955/30 border border-slate-900/80 px-2.5 py-1 rounded text-slate-300 shrink-0 font-mono font-medium">{req.status}</span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 

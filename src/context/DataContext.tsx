@@ -3,9 +3,9 @@ import {
   collection, doc, setDoc, onSnapshot, getDocs, deleteDoc, writeBatch
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
-import { Feature, PricingPlan, FAQItem, SiteSettings } from '../types';
+import { Feature, PricingPlan, FAQItem, SiteSettings, Integration } from '../types';
 import { 
-  DEFAULT_FEATURES, DEFAULT_PRICING, DEFAULT_FAQS, DEFAULT_SETTINGS 
+  DEFAULT_FEATURES, DEFAULT_PRICING, DEFAULT_FAQS, DEFAULT_SETTINGS, DEFAULT_INTEGRATIONS 
 } from '../lib/defaults';
 
 enum OperationType {
@@ -59,6 +59,7 @@ interface DataContextType {
   features: Feature[];
   pricingPlans: PricingPlan[];
   faqs: FAQItem[];
+  integrations: Integration[];
   settings: SiteSettings;
   loading: boolean;
   isBootstrapping: boolean;
@@ -72,6 +73,7 @@ interface DataContextType {
   addFAQ: (faq: Omit<FAQItem, 'id'>) => Promise<void>;
   updateFAQ: (faq: FAQItem) => Promise<void>;
   deleteFAQ: (id: string) => Promise<void>;
+  updateIntegration: (integration: Integration) => Promise<void>;
   resetToDefaults: () => Promise<void>;
   incrementDownload: () => Promise<void>;
   incrementVisit: () => Promise<void>;
@@ -84,6 +86,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [features, setFeatures] = useState<Feature[]>([]);
   const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
   const [faqs, setFaqs] = useState<FAQItem[]>([]);
+  const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [isBootstrapping, setIsBootstrapping] = useState(false);
@@ -172,8 +175,25 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           batch.set(ref, faq);
         });
 
+        DEFAULT_INTEGRATIONS.forEach((integration) => {
+          const ref = doc(db, 'integrations', integration.id);
+          batch.set(ref, integration);
+        });
+
         await batch.commit();
         console.log("Bootstrap complete!");
+      } else {
+        // Double check integrations collection separately, in case it wasn't there before
+        const integrationSnap = await getDocs(collection(db, 'integrations')).catch(() => null);
+        if (!integrationSnap || integrationSnap.empty) {
+          console.log("Integrations empty. Bootstrapping defaults...");
+          const batch = writeBatch(db);
+          DEFAULT_INTEGRATIONS.forEach((integration) => {
+            const ref = doc(db, 'integrations', integration.id);
+            batch.set(ref, integration);
+          });
+          await batch.commit();
+        }
       }
     } catch (err) {
       console.warn("Bootstrap/initial checks failed or lacked permissions. Using local/fallback rules.", err);
@@ -209,6 +229,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       },
       (error) => {
         handleFirestoreError(error, OperationType.GET, 'features');
+      }
+    );
+
+    const unsubIntegrations = onSnapshot(
+      collection(db, 'integrations'),
+      (snapshot) => {
+        const list: Integration[] = [];
+        snapshot.forEach((doc) => {
+          list.push(doc.data() as Integration);
+        });
+        setIntegrations(list.sort((a, b) => a.order - b.order));
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, 'integrations');
       }
     );
 
@@ -280,6 +314,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       unsubFaq();
       unsubSettings();
       unsubStats();
+      unsubIntegrations();
     };
   }, []);
 
@@ -325,6 +360,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const path = `settings/${newSettings.id}`;
     try {
       await setDoc(doc(db, 'settings', newSettings.id), newSettings);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  };
+
+  const updateIntegration = async (integration: Integration) => {
+    const path = `integrations/${integration.id}`;
+    try {
+      await setDoc(doc(db, 'integrations', integration.id), integration);
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, path);
     }
@@ -381,6 +425,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         batch.set(doc(db, 'faqs', faq.id), faq);
       });
 
+      // Reset integrations
+      DEFAULT_INTEGRATIONS.forEach((integration) => {
+        batch.set(doc(db, 'integrations', integration.id), integration);
+      });
+
       await batch.commit();
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'reset_all');
@@ -390,12 +439,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const fallbackFeatures = features.length > 0 ? features : DEFAULT_FEATURES;
   const fallbackPricing = pricingPlans.length > 0 ? pricingPlans : DEFAULT_PRICING;
   const fallbackFaqs = faqs.length > 0 ? faqs : DEFAULT_FAQS;
+  const fallbackIntegrations = integrations.length > 0 ? integrations : DEFAULT_INTEGRATIONS;
 
   return (
     <DataContext.Provider value={{
       features: fallbackFeatures,
       pricingPlans: fallbackPricing,
       faqs: fallbackFaqs,
+      integrations: fallbackIntegrations,
       settings,
       loading: loading && !fallbackFeatures.length,
       isBootstrapping,
@@ -409,6 +460,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       addFAQ,
       updateFAQ,
       deleteFAQ,
+      updateIntegration,
       resetToDefaults,
       incrementDownload,
       incrementVisit,

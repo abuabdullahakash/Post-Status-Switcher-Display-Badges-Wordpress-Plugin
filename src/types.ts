@@ -32,11 +32,14 @@ export interface Feature {
   gallery?: string[];
   galleryCaptions?: string[];
   tutorialVideos?: { id: string; url: string; title: string; poster?: string }[];
+  fullDescription?: string;
+  realWorldPillars?: { title: string; subtitle: string; description: string; tag: string; link?: string }[];
   
   // Pending moderation details
   pendingApproval?: 'create' | 'update' | null;
   pendingUpdateData?: Partial<Feature> | null;
   category?: string;
+  systemCompatibility?: string;
 }
 
 export interface PricingPlan {
@@ -98,3 +101,15 @@ export interface SiteSettings {
   statusModalTitle?: string;
   statusModalMessage?: string;
 }
+
+export interface Integration {
+  id: string;
+  name: string;
+  subtitle: string;
+  badge: string;
+  description: string;
+  testedVersion: string;
+  active: boolean;
+  order: number;
+}
+

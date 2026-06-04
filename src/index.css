@@ -3,6 +3,8 @@
 
 @theme {
   --color-slate-950: #0b0f19;
+  --color-slate-900: #0f172a;
+  --color-slate-850: #141b2c;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;

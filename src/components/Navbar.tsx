@@ -18,6 +18,7 @@ export default function Navbar() {
 
   const links = [
     { name: 'Features', href: '#features' },
+    { name: 'Integrations', href: '#integrations' },
     { name: 'Documentation', href: '#docs' },
     { name: 'Pricing', href: '#pricing' },
     { name: 'FAQ', href: '#faq' },

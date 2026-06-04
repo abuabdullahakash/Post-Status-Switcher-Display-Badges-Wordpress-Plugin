@@ -208,7 +208,7 @@ export default function Features() {
           >
             <div className="px-6 py-6 sm:px-12 sm:py-8 text-center max-w-2xl">
               <span className="text-xs font-mono font-bold tracking-widest text-[#3b82f6] uppercase block mb-2">
-                1000+ MODULE ROSTER ACTIVE
+                {features.filter(f => f.active).length} MODULE ROSTER ACTIVE
               </span>
               <h3 className="text-lg sm:text-xl font-bold text-white mb-2">
                 Looking for a specific configuration module?
@@ -221,7 +221,7 @@ export default function Features() {
                 href="#all-features"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold text-xs sm:text-sm text-white transition-all duration-200 hover:shadow-[0_0_25px_rgba(59,130,246,0.45)] group shrink-0"
               >
-                <span>Browse All 1,000+ Features</span>
+                <span>Browse All {features.filter(f => f.active).length} Features</span>
                 <Icons.ArrowRight className="w-4 h-4 transition-transform duration-250 group-hover:translate-x-1" />
               </a>
             </div>

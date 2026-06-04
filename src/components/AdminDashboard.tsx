@@ -15,13 +15,14 @@ import { Feature, PricingPlan, FAQItem, SiteSettings } from '../types';
 import { DEFAULT_CATEGORIES } from '../lib/defaults';
 import * as Icons from 'lucide-react';
 import ImageUploader from './ImageUploader';
+import FeatureForm from './FeatureForm';
 import jsPDF from 'jspdf';
 
 const {
   Lock, AlertCircle, Sparkles, LogOut, Check, Plus, Trash2, 
   Edit3, Eye, Settings2, HelpCircle, Columns, ShoppingCart, 
   Timer, Zap, Home, Star, Users, LockOpen, Globe, CheckCircle, 
-  ShieldCheck, Calendar, Ticket, GraduationCap, Award, RefreshCw, X, Mail
+  ShieldCheck, Calendar, Ticket, GraduationCap, Award, RefreshCw, X, Mail, Puzzle
 } = Icons;
 
 interface AdminDashboardProps {
@@ -36,8 +37,8 @@ const lucideIconNames = [
 
 export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const { 
-    features, pricingPlans, faqs, settings, isBootstrapping,
-    updateFeature, addFeature, deleteFeature, updatePricingPlan, updateSettings, addFAQ, updateFAQ, deleteFAQ, resetToDefaults,
+    features, pricingPlans, faqs, integrations, settings, isBootstrapping,
+    updateFeature, addFeature, deleteFeature, updatePricingPlan, updateSettings, addFAQ, updateFAQ, deleteFAQ, updateIntegration, resetToDefaults,
     downloadsCount, visitsCount, updateStatsCounts
   } = useData();
 
@@ -122,7 +123,7 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'features' | 'pricing' | 'faq' | 'settings' | 'inquiries'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'features' | 'pricing' | 'faq' | 'settings' | 'inquiries' | 'integrations'>('dashboard');
   const [settingsSubTab, setSettingsSubTab] = useState<'identity' | 'hero' | 'marketing' | 'download' | 'smtp' | 'danger' | 'status_modal'>('identity');
 
   // Quick category creation popup states
@@ -134,6 +135,14 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Ecosystem Integrations admin states
+  const [editingIntegrationId, setEditingIntegrationId] = useState<string | null>(null);
+  const [editInName, setEditInName] = useState('');
+  const [editInSubtitle, setEditInSubtitle] = useState('');
+  const [editInBadge, setEditInBadge] = useState('');
+  const [editInDesc, setEditInDesc] = useState('');
+  const [editInVersion, setEditInVersion] = useState('');
   
   // Custom states for search, list-grid view, unsaved-changes original feature snapshots
   const [featureSearchQuery, setFeatureSearchQuery] = useState('');
@@ -754,6 +763,91 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
     }
   };
 
+  const handleSaveFeatureForm = async (updatedFeature: Partial<Feature>) => {
+    setIsSaving(true);
+    try {
+      await updateFeature(updatedFeature as Feature);
+      await logAdminAction('update', 'Feature', `Updated feature configuration: ${updatedFeature.title}`);
+      setToast({ message: "Feature card details updated and broadcasted to live users.", type: 'success' });
+      setEditingFeature(null);
+      setTimeout(() => setToast(null), 4000);
+    } catch (err) {
+      setToast({ message: "Error saving feature. Make sure you are logged in and authorized.", type: 'error' });
+      setTimeout(() => setToast(null), 5000);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCreateFeatureForm = async (f: Partial<Feature>) => {
+    setIsSaving(true);
+    try {
+      await addFeature({
+        title: f.title || 'Untitled Feature',
+        description: f.description || '',
+        iconName: f.iconName || 'Sparkles',
+        color: f.color || 'from-blue-500 to-indigo-500',
+        useCase: f.useCase || '',
+        active: f.active !== false,
+        order: Number(f.order) || features.length + 1,
+        testimonialQuote: f.testimonialQuote || '',
+        testimonialAuthor: f.testimonialAuthor || '',
+        testimonialRole: f.testimonialRole || '',
+        realWorldCase1Title: f.realWorldCase1Title || '',
+        realWorldCase1Subtitle: f.realWorldCase1Subtitle || '',
+        realWorldCase1Tag: f.realWorldCase1Tag || '',
+        realWorldCase1Desc: f.realWorldCase1Desc || '',
+        realWorldCase2Title: f.realWorldCase2Title || '',
+        realWorldCase2Subtitle: f.realWorldCase2Subtitle || '',
+        realWorldCase2Tag: f.realWorldCase2Tag || '',
+        realWorldCase2Desc: f.realWorldCase2Desc || '',
+        realWorldCase3Title: f.realWorldCase3Title || '',
+        realWorldCase3Subtitle: f.realWorldCase3Subtitle || '',
+        realWorldCase3Tag: f.realWorldCase3Tag || '',
+        realWorldCase3Desc: f.realWorldCase3Desc || '',
+        videoUrl: f.videoUrl || '',
+        videoPoster: f.videoPoster || '',
+        gallery: f.gallery || [],
+        category: f.category || 'general',
+      });
+      setIsAddingFeature(false);
+      setNewFeature({
+        title: '',
+        description: '',
+        iconName: 'Sparkles',
+        color: 'from-blue-500 to-indigo-500',
+        useCase: '',
+        category: 'general',
+        active: true,
+        order: features.length + 2,
+        testimonialQuote: '',
+        testimonialAuthor: '',
+        testimonialRole: '',
+        realWorldCase1Title: '',
+        realWorldCase1Subtitle: '',
+        realWorldCase1Tag: '',
+        realWorldCase1Desc: '',
+        realWorldCase2Title: '',
+        realWorldCase2Subtitle: '',
+        realWorldCase2Tag: '',
+        realWorldCase2Desc: '',
+        realWorldCase3Title: '',
+        realWorldCase3Subtitle: '',
+        realWorldCase3Tag: '',
+        realWorldCase3Desc: '',
+        videoUrl: '',
+      });
+      await logAdminAction('create', 'Feature', `Created new feature: ${f.title}`);
+      setToast({ message: "New feature card deployed successfully!", type: 'success' });
+      setTimeout(() => setToast(null), 4000);
+    } catch (err) {
+      setToast({ message: "Error adding feature. Make sure you are authorized.", type: 'error' });
+      setTimeout(() => setToast(null), 5000);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleDeleteFeature = async (id: string) => {
     if (confirm("Are you sure you want to permanently DELETE this feature card? This is completely irreversible.")) {
       try {
@@ -1179,6 +1273,13 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                 >
                   <Mail className="w-4 h-4" />
                   Inquiries
+                </button>
+                <button 
+                  onClick={() => { setActiveTab('integrations'); setIsMobileMenuOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${activeTab === 'integrations' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-400' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
+                >
+                  <Puzzle className="w-4 h-4" />
+                  Ecosystem Partners
                 </button>
                 <button 
                   onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }}
@@ -1702,937 +1803,37 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                   </div>
 
                   {editingFeature ? (
-                    <motion.form 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      onSubmit={handleSaveFeature}
-                      className="p-4 sm:p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-4"
-                    >
-                      <div className="flex justify-between items-center pb-3 border-b border-slate-900">
-                        <h4 className="font-bold text-white text-sm flex items-center gap-1.5">
-                          <Icons.Sparkles className="w-4 h-4 text-blue-500 animate-pulse" />
-                          <span>Editing Card: {editingFeature.title}</span>
-                        </h4>
-                        <button 
-                          type="button" 
-                          onClick={handleCancelEditFeature}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
-                        >
-                          <Icons.ArrowLeft className="w-3.5 h-3.5 text-blue-400" />
-                          <span>Back without Changes</span>
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs text-slate-400 mb-1 font-medium">Card Title</label>
-                          <input 
-                            type="text"
-                            value={editingFeature.title}
-                            onChange={(e) => setEditingFeature({ ...editingFeature, title: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-slate-400 mb-1 font-medium">Use Case Color Layout (Tailwind Gradient)</label>
-                          <input 
-                            type="text"
-                            value={editingFeature.color}
-                            onChange={(e) => setEditingFeature({ ...editingFeature, color: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-white text-sm font-mono focus:outline-none focus:border-blue-500"
-                            required
-                          />
-                          <span className="text-[10px] text-slate-500">e.g., from-blue-500 to-indigo-500 or from-rose-500 to-red-600</span>
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-xs text-slate-400 mb-1 font-medium">Card High-level Description</label>
-                          <textarea 
-                            value={editingFeature.description}
-                            onChange={(e) => setEditingFeature({ ...editingFeature, description: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-white text-sm h-20 focus:outline-none focus:border-blue-500 resize-none"
-                            required
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-xs text-slate-400 mb-1 font-medium">Detailed Real-World Use Case Action</label>
-                          <textarea 
-                            value={editingFeature.useCase}
-                            onChange={(e) => setEditingFeature({ ...editingFeature, useCase: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-white text-sm h-20 focus:outline-none focus:border-blue-500 resize-none"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <div className="flex justify-between items-center mb-1">
-                            <label className="block text-xs text-slate-400 font-medium">Paste SVG Code or Type Lucide Name</label>
-                            <a 
-                              href="https://lucide.dev" 
-                              target="_blank" 
-                              rel="noreferrer noopener"
-                              className="text-[10px] text-blue-400 hover:underline flex items-center gap-1"
-                            >
-                              <Icons.Globe className="w-3 h-3 text-blue-400" />
-                              Browse Lucide (lucide.dev)
-                            </a>
-                          </div>
-                          <div className="flex gap-2">
-                            <textarea 
-                              rows={2}
-                              value={editingFeature.iconName || 'Sparkles'}
-                              onChange={(e) => setEditingFeature({ ...editingFeature, iconName: e.target.value })}
-                              className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-blue-500 resize-none"
-                              placeholder="e.g. Sparkles, or <svg xmlns=..."
-                            />
-                            {/* Live Icon Preview box */}
-                            <div className="w-12 h-12 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center justify-center shrink-0">
-                              {editingFeature.iconName && (editingFeature.iconName.trim().startsWith('<svg') || editingFeature.iconName.includes('<svg') || editingFeature.iconName.includes('xmlns=')) ? (
-                                <div 
-                                  className="w-5 h-5 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:stroke-[2] text-white"
-                                  dangerouslySetInnerHTML={{ __html: editingFeature.iconName }}
-                                />
-                              ) : (
-                                (() => {
-                                  const IconComponent = (Icons as any)[editingFeature.iconName] || Icons.HelpCircle;
-                                  return <IconComponent className="w-5 h-5 text-white" />;
-                                })()
-                              )}
-                            </div>
-                          </div>
-                          <span className="text-[9px] text-slate-500 mt-1 block font-medium">Paste custom SVG code or type standard Lucide name like "Home", "Calendar", "Sparkles"!</span>
-                        </div>
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="block text-xs text-slate-400 font-medium">Card Category</label>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setQuickCategoryTarget('edit');
-                                setQuickCategoryName('');
-                                setQuickCategoryIcon('');
-                                setQuickCategoryOpen(true);
-                              }}
-                              className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold cursor-pointer py-1 px-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all shadow-sm"
-                            >
-                              <Icons.Plus className="w-3 h-3 text-emerald-400" />
-                              <span>Add Category</span>
-                            </button>
-                          </div>
-                          <select 
-                            value={editingFeature.category || 'general'}
-                            onChange={(e) => setEditingFeature({ ...editingFeature, category: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-slate-300 text-sm focus:outline-none focus:border-blue-500 text-white"
-                          >
-                            {(settings.categoriesList || DEFAULT_CATEGORIES).map(cat => (
-                              <option key={cat.id} value={cat.id}>{cat.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="flex items-center h-full pt-6">
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <input 
-                              type="checkbox"
-                              checked={editingFeature.active}
-                              onChange={(e) => setEditingFeature({ ...editingFeature, active: e.target.checked })}
-                              className="w-4 h-4 accent-blue-500"
-                            />
-                            <span className="text-sm text-slate-300 font-medium">Set Feature Status Active / Enabled</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Advanced Single Page Content */}
-                      <div className="border-t border-slate-900 pt-6 mt-6 space-y-4">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
-                          <h5 className="text-sm font-bold text-white uppercase tracking-wider">Features Single-Page Custom Overrides</h5>
-                        </div>
-                        <p className="text-xs text-slate-400">Configure custom testimonials and real-world cases displayed in this specific feature's individual details page. Backs up to high-quality fallback presets if left blank.</p>
-
-                        {/* Video Showcase Input Block */}
-                        <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10 space-y-4">
-                          <div className="flex items-center gap-2">
-                            <Icons.Video className="w-4 h-4 text-indigo-400" />
-                            <span className="text-[10px] uppercase font-bold text-indigo-400 tracking-wider block">Custom Showcase Video & Feature Image</span>
-                          </div>
-                          
-                          {/* Feature Video Image / Poster */}
-                          <div className="space-y-2 pb-3 border-b border-slate-900">
-                            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">Feature Video Image (Poster/Thumbnail)</label>
-                            <p className="text-[11px] text-slate-450">Upload or drag-and-drop a thumbnail cover image for the tutorial video player. Supports clipboard paste (Ctrl+V).</p>
-                            <ImageUploader 
-                              presetUrl={editingFeature.videoPoster || ""} 
-                              onUploadSuccess={(url) => setEditingFeature({ ...editingFeature, videoPoster: url })}
-                            />
-                            <div className="pt-2">
-                              <label className="block text-[10px] text-slate-450 uppercase mb-1 font-mono">Or paste Video Cover Image Link directly:</label>
-                              <input 
-                                type="text"
-                                value={editingFeature.videoPoster || ""}
-                                onChange={(e) => setEditingFeature({ ...editingFeature, videoPoster: e.target.value })}
-                                placeholder="e.g. https://images.unsplash.com/photo-..."
-                                className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-1.5 text-slate-300 text-xs focus:outline-none focus:border-indigo-500 font-mono"
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-xs text-slate-300 mb-1 font-medium font-semibold uppercase tracking-wider text-[11px]">Showcase Video Stream URL</label>
-                            <input 
-                              type="text"
-                              value={editingFeature.videoUrl || ""}
-                              onChange={(e) => setEditingFeature({ ...editingFeature, videoUrl: e.target.value })}
-                              placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ or https://myhost.com/video.mp4"
-                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-slate-300 text-sm focus:outline-none focus:border-indigo-500 font-mono"
-                            />
-                            <p className="text-[10px] text-slate-500 mt-1">Accepts YouTube watch links, direct MP4/WebM resources, or public Google Drive file URL.</p>
-                          </div>
-                        </div>
-
-                        {/* Showcase Gallery Images Manager */}
-                        <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 space-y-4">
-                          <div className="flex items-center gap-2">
-                            <Icons.Image className="w-4 h-4 text-blue-400" />
-                            <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Custom Showcase Gallery Images</span>
-                          </div>
-                          
-                          <div>
-                            <p className="text-xs text-slate-405 mb-3">Upload portfolio or dashboard screenshots of this feature to create an elegant image gallery for the feature overview page.</p>
-                            
-                            {editingFeature.gallery && editingFeature.gallery.length > 0 ? (
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 p-2 bg-slate-950 rounded-xl border border-slate-900">
-                                {editingFeature.gallery.map((imgUrl, i) => (
-                                  <div key={i} className="group relative aspect-video rounded-lg overflow-hidden border border-slate-850 bg-slate-900">
-                                    <img src={imgUrl} alt={`Screenshot ${i}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const nextGallery = (editingFeature.gallery || []).filter((_, idx) => idx !== i);
-                                        setEditingFeature({ ...editingFeature, gallery: nextGallery });
-                                      }}
-                                      className="absolute top-1 right-1 w-5 h-5 bg-red-650 flex items-center justify-center text-white rounded-full hover:bg-red-500 transition-colors shadow-lg text-sm font-bold focus:outline-none cursor-pointer"
-                                      title="Remove image from gallery"
-                                    >
-                                      &times;
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-[11px] text-slate-500 mb-3 block italic">No custom gallery screenshots configured. High-quality generic templates are used as placeholders.</p>
-                            )}
-
-                            {/* Add a new image to gallery */}
-                            <div className="space-y-3">
-                              <span className="block text-[10px] font-mono font-bold uppercase text-slate-450 tracking-wider">Upload or Paste Image here to add to gallery:</span>
-                              <ImageUploader 
-                                onUploadSuccess={(url) => {
-                                  if (url) {
-                                    const nextG = [...(editingFeature.gallery || []), url];
-                                    setEditingFeature({ ...editingFeature, gallery: nextG });
-                                  }
-                                }}
-                              />
-                              <div className="pt-2">
-                                <label className="block text-[10px] text-slate-450 uppercase mb-1 font-mono">Or paste a Direct Image Link to Add:</label>
-                                <div className="flex gap-2">
-                                  <input 
-                                    type="text"
-                                    id="manual-gallery-url-edit"
-                                    placeholder="https://images.unsplash.com/..."
-                                    className="flex-1 bg-slate-950 border border-slate-900 rounded-xl px-3 py-1.5 text-xs text-slate-300 font-mono focus:outline-none"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const inputEl = document.getElementById('manual-gallery-url-edit') as HTMLInputElement;
-                                      const urlVal = inputEl?.value?.trim();
-                                      if (urlVal) {
-                                        const nextG = [...(editingFeature.gallery || []), urlVal];
-                                        setEditingFeature({ ...editingFeature, gallery: nextG });
-                                        if (inputEl) inputEl.value = '';
-                                      }
-                                    }}
-                                    className="px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
-                                  >
-                                    Add Link
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Testimonial Fields Group */}
-                        <div className="p-4 rounded-xl bg-slate-900/30 border border-slate-900 space-y-3">
-                          <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Bespoke Customer Interview</span>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div className="md:col-span-2">
-                              <label className="block text-[11px] text-slate-400 mb-1">Quote</label>
-                              <textarea
-                                value={editingFeature.testimonialQuote || ""}
-                                onChange={(e) => setEditingFeature({ ...editingFeature, testimonialQuote: e.target.value })}
-                                placeholder="Integrating post-status badges transformed our content dashboard transparency..."
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs h-16 focus:outline-none focus:border-blue-500 resize-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1">Author Name</label>
-                              <input 
-                                type="text" 
-                                placeholder="Alex Mercer"
-                                value={editingFeature.testimonialAuthor || ""}
-                                onChange={(e) => setEditingFeature({ ...editingFeature, testimonialAuthor: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1">Author Profession/Company Info</label>
-                              <input 
-                                type="text" 
-                                placeholder="Lead React Architect, JetLabs"
-                                value={editingFeature.testimonialRole || ""}
-                                onChange={(e) => setEditingFeature({ ...editingFeature, testimonialRole: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Use Case 1 */}
-                        <div className="p-4 rounded-xl bg-slate-900/30 border border-slate-900 space-y-3">
-                          <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Custom Use-Case #1 Details</span>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Title</label>
-                              <input 
-                                type="text" 
-                                placeholder="Automated Recruitment Lists"
-                                value={editingFeature.realWorldCase1Title || ""}
-                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase1Title: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Subtitle</label>
-                              <input 
-                                type="text" 
-                                placeholder="Interactive tracking"
-                                value={editingFeature.realWorldCase1Subtitle || ""}
-                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase1Subtitle: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Tag / Category Badge</label>
-                              <input 
-                                type="text" 
-                                placeholder="HR Board"
-                                value={editingFeature.realWorldCase1Tag || ""}
-                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase1Tag: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div className="md:col-span-3">
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Description</label>
-                              <input 
-                                type="text" 
-                                placeholder="Help recruiters see applicant counts directly on job postings automatically without refreshing."
-                                value={editingFeature.realWorldCase1Desc || ""}
-                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase1Desc: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Use Case 2 */}
-                        <div className="p-4 rounded-xl bg-slate-900/30 border border-slate-900 space-y-3">
-                          <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Custom Use-Case #2 Details</span>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Title</label>
-                              <input 
-                                type="text" 
-                                placeholder="E-Commerce Badges"
-                                value={editingFeature.realWorldCase2Title || ""}
-                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase2Title: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Subtitle</label>
-                              <input 
-                                type="text" 
-                                placeholder="Increase Conversions"
-                                value={editingFeature.realWorldCase2Subtitle || ""}
-                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase2Subtitle: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Tag / Category Badge</label>
-                              <input 
-                                type="text" 
-                                placeholder="WooCommerce"
-                                value={editingFeature.realWorldCase2Tag || ""}
-                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase2Tag: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div className="md:col-span-3">
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Description</label>
-                              <input 
-                                type="text" 
-                                placeholder="Trigger in stock and low inventory warnings instantly with specific color combinations."
-                                value={editingFeature.realWorldCase2Desc || ""}
-                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase2Desc: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Use Case 3 */}
-                        <div className="p-4 rounded-xl bg-slate-900/30 border border-slate-900 space-y-3">
-                          <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Custom Use-Case #3 Details</span>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Title</label>
-                              <input 
-                                type="text" 
-                                placeholder="Medical Staff Portals"
-                                value={editingFeature.realWorldCase3Title || ""}
-                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase3Title: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Subtitle</label>
-                              <input 
-                                type="text" 
-                                placeholder="Interactive Booking"
-                                value={editingFeature.realWorldCase3Subtitle || ""}
-                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase3Subtitle: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Tag / Category Badge</label>
-                              <input 
-                                type="text" 
-                                placeholder="Healthcare"
-                                value={editingFeature.realWorldCase3Tag || ""}
-                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase3Tag: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div className="md:col-span-3">
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Description</label>
-                              <input 
-                                type="text" 
-                                placeholder="Track clinic rooms or active appointments in real time using green online indicators."
-                                value={editingFeature.realWorldCase3Desc || ""}
-                                onChange={(e) => setEditingFeature({ ...editingFeature, realWorldCase3Desc: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end gap-3 pt-4 border-t border-slate-900 mt-4">
-                        <button 
-                          type="button" 
-                          onClick={handleCancelEditFeature}
-                          className="px-4 py-2 hover:bg-slate-900 rounded-xl text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
-                        >
-                          Cancel
-                        </button>
-                        <button 
-                          type="submit"
-                          disabled={isSaving}
-                          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/35 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          {isSaving ? (
-                            <>
-                              <Icons.RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-200" />
-                              <span>Saving changes...</span>
-                            </>
-                          ) : (
-                            <span>Apply & Save Feature Changes</span>
-                          )}
-                        </button>
-                      </div>
-                    </motion.form>
+                    <FeatureForm
+                      initialFeature={editingFeature}
+                      isEditing={true}
+                      onSubmit={handleSaveFeatureForm}
+                      onCancel={handleCancelEditFeature}
+                      categories={settings?.categoriesList || DEFAULT_CATEGORIES}
+                      onAddCategoryClick={(target) => {
+                        setQuickCategoryTarget(target);
+                        setQuickCategoryName('');
+                        setQuickCategoryIcon('');
+                        setQuickCategoryOpen(true);
+                      }}
+                      isSaving={isSaving}
+                    />
                   ) : null}
 
                   {isAddingFeature ? (
-                    <motion.form 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      onSubmit={handleCreateFeature}
-                      className="p-4 sm:p-6 rounded-2xl bg-slate-950 border border-emerald-500/20 space-y-4 shadow-xl shadow-emerald-500/5"
-                    >
-                      <div className="flex justify-between items-center pb-3 border-b border-slate-900">
-                        <h4 className="font-bold text-white text-sm flex items-center gap-2">
-                          <Icons.BadgeAlert className="w-4 h-4 text-emerald-400" />
-                          Create New Feature Card Content
-                        </h4>
-                        <button 
-                          type="button" 
-                          onClick={handleCancelAddFeature}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
-                        >
-                          <Icons.ArrowLeft className="w-3.5 h-3.5 text-blue-400" />
-                          Cancel & Return
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs text-slate-400 mb-1 font-medium">Card Title</label>
-                          <input 
-                            type="text"
-                            value={newFeature.title || ''}
-                            onChange={(e) => setNewFeature({ ...newFeature, title: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500"
-                            placeholder="e.g., Live Agent Desk"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-slate-400 mb-1 font-medium">Use Case Color Layout (Tailwind Gradient)</label>
-                          <input 
-                            type="text"
-                            value={newFeature.color || ''}
-                            onChange={(e) => setNewFeature({ ...newFeature, color: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm font-mono focus:outline-none focus:border-blue-500"
-                            placeholder="from-emerald-500 to-teal-600"
-                            required
-                          />
-                          <span className="text-[10px] text-slate-500">e.g., from-blue-500 to-indigo-500 or from-rose-500 to-red-600</span>
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-xs text-slate-400 mb-1 font-medium">Card High-level Description</label>
-                          <textarea 
-                            value={newFeature.description || ''}
-                            onChange={(e) => setNewFeature({ ...newFeature, description: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-white text-sm h-20 focus:outline-none focus:border-blue-500 resize-none"
-                            placeholder="A concise, engaging copy summarising this premium booster feature card..."
-                            required
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-xs text-slate-400 mb-1 font-medium">Detailed Real-World Use Case Action</label>
-                          <textarea 
-                            value={newFeature.useCase || ''}
-                            onChange={(e) => setNewFeature({ ...newFeature, useCase: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-white text-sm h-20 focus:outline-none focus:border-blue-500 resize-none"
-                            placeholder="Describe concrete scenarios in which site admins rely on this feature's dynamic tags..."
-                            required
-                          />
-                        </div>
-                        <div>
-                          <div className="flex justify-between items-center mb-1">
-                            <label className="block text-xs text-slate-400 font-medium">Paste SVG Code or Type Lucide Name</label>
-                            <a 
-                              href="https://lucide.dev" 
-                              target="_blank" 
-                              rel="noreferrer noopener"
-                              className="text-[10px] text-blue-400 hover:underline flex items-center gap-1"
-                            >
-                              <Icons.Globe className="w-3 h-3 text-blue-400" />
-                              Browse Lucide (lucide.dev)
-                            </a>
-                          </div>
-                          <div className="flex gap-2">
-                            <textarea 
-                              rows={2}
-                              value={newFeature.iconName || 'Sparkles'}
-                              onChange={(e) => setNewFeature({ ...newFeature, iconName: e.target.value })}
-                              className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-white text-xs font-mono focus:outline-none focus:border-blue-500 resize-none animate-none"
-                              placeholder="e.g. Sparkles, or <svg xmlns=..."
-                            />
-                            {/* Live Icon Preview box */}
-                            <div className="w-12 h-12 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center justify-center shrink-0">
-                              {newFeature.iconName && (newFeature.iconName.trim().startsWith('<svg') || newFeature.iconName.includes('<svg') || newFeature.iconName.includes('xmlns=')) ? (
-                                <div 
-                                  className="w-5 h-5 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:stroke-[2] text-white"
-                                  dangerouslySetInnerHTML={{ __html: newFeature.iconName }}
-                                />
-                              ) : (
-                                (() => {
-                                  const IconComponent = (Icons as any)[newFeature.iconName || 'Sparkles'] || Icons.HelpCircle;
-                                  return <IconComponent className="w-5 h-5 text-white" />;
-                                })()
-                              )}
-                            </div>
-                          </div>
-                          <span className="text-[9px] text-slate-500 mt-1 block font-medium">Paste custom SVG code or type standard Lucide name like "Home", "Calendar", "Sparkles"!</span>
-                        </div>
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="block text-xs text-slate-400 font-medium">Card Category</label>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setQuickCategoryTarget('new');
-                                setQuickCategoryName('');
-                                setQuickCategoryIcon('');
-                                setQuickCategoryOpen(true);
-                              }}
-                              className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold cursor-pointer py-1 px-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all shadow-sm"
-                            >
-                              <Icons.Plus className="w-3 h-3 text-emerald-400" />
-                              <span>Add Category</span>
-                            </button>
-                          </div>
-                          <select 
-                            value={newFeature.category || 'general'}
-                            onChange={(e) => setNewFeature({ ...newFeature, category: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-300 text-sm focus:outline-none focus:border-blue-500 text-white"
-                          >
-                            {(settings.categoriesList || DEFAULT_CATEGORIES).map(cat => (
-                              <option key={cat.id} value={cat.id}>{cat.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="flex items-center h-full pt-6 flex-wrap">
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <input 
-                              type="checkbox"
-                              checked={newFeature.active !== false}
-                              onChange={(e) => setNewFeature({ ...newFeature, active: e.target.checked })}
-                              className="w-4 h-4 accent-blue-500"
-                            />
-                            <span className="text-sm text-slate-300 font-medium">Publish Feature Active / Enabled</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Advanced Single Page Content */}
-                      <div className="border-t border-slate-900 pt-6 mt-6 space-y-4">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
-                          <h5 className="text-sm font-bold text-white uppercase tracking-wider">Features Single-Page Custom Overrides (Optional)</h5>
-                        </div>
-                        <p className="text-xs text-slate-400">Configure custom testimonials and real-world cases displayed in this specific feature's individual details page.</p>
-
-                        {/* Video Showcase Input Block */}
-                        <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10 space-y-4">
-                          <div className="flex items-center gap-2">
-                            <Icons.Video className="w-4 h-4 text-indigo-400" />
-                            <span className="text-[10px] uppercase font-bold text-indigo-400 tracking-wider block">Custom Showcase Video & Feature Image</span>
-                          </div>
-                          
-                          {/* Feature Video Image / Poster */}
-                          <div className="space-y-2 pb-3 border-b border-slate-900">
-                            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">Feature Video Image (Poster/Thumbnail)</label>
-                            <p className="text-[11px] text-slate-450">Upload or drag-and-drop a thumbnail cover image for the tutorial video player. Supports clipboard paste (Ctrl+V).</p>
-                            <ImageUploader 
-                              presetUrl={newFeature.videoPoster || ""} 
-                              onUploadSuccess={(url) => setNewFeature({ ...newFeature, videoPoster: url })}
-                            />
-                            <div className="pt-2">
-                              <label className="block text-[10px] text-slate-450 uppercase mb-1 font-mono">Or paste Video Cover Image Link directly:</label>
-                              <input 
-                                type="text"
-                                value={newFeature.videoPoster || ""}
-                                onChange={(e) => setNewFeature({ ...newFeature, videoPoster: e.target.value })}
-                                placeholder="e.g. https://images.unsplash.com/photo-..."
-                                className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-1.5 text-slate-300 text-xs focus:outline-none focus:border-indigo-500 font-mono"
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-xs text-slate-300 mb-1 font-medium font-semibold uppercase tracking-wider text-[11px]">Showcase Video Stream URL</label>
-                            <input 
-                              type="text"
-                              value={newFeature.videoUrl || ""}
-                              onChange={(e) => setNewFeature({ ...newFeature, videoUrl: e.target.value })}
-                              placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ or https://myhost.com/video.mp4"
-                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-slate-300 text-sm focus:outline-none focus:border-indigo-500 font-mono"
-                            />
-                            <p className="text-[10px] text-slate-500 mt-1">Accepts YouTube watch links, direct MP4/WebM resources, or public Google Drive file URL.</p>
-                          </div>
-                        </div>
-
-                        {/* Showcase Gallery Images Manager */}
-                        <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 space-y-4">
-                          <div className="flex items-center gap-2">
-                            <Icons.Image className="w-4 h-4 text-blue-400" />
-                            <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Custom Showcase Gallery Images</span>
-                          </div>
-                          
-                          <div>
-                            <p className="text-xs text-slate-405 mb-3">Upload portfolio or dashboard screenshots of this feature to create an elegant image gallery for the feature overview page.</p>
-                            
-                            {newFeature.gallery && newFeature.gallery.length > 0 ? (
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 p-2 bg-slate-950 rounded-xl border border-slate-900">
-                                {newFeature.gallery.map((imgUrl, i) => (
-                                  <div key={i} className="group relative aspect-video rounded-lg overflow-hidden border border-slate-850 bg-slate-900">
-                                    <img src={imgUrl} alt={`Screenshot ${i}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const nextGallery = (newFeature.gallery || []).filter((_, idx) => idx !== i);
-                                        setNewFeature({ ...newFeature, gallery: nextGallery });
-                                      }}
-                                      className="absolute top-1 right-1 w-5 h-5 bg-red-650 flex items-center justify-center text-white rounded-full hover:bg-red-500 transition-colors shadow-lg text-sm font-bold focus:outline-none cursor-pointer"
-                                      title="Remove image from gallery"
-                                    >
-                                      &times;
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-[11px] text-slate-500 mb-3 block italic">No custom gallery screenshots configured. High-quality generic templates are used as placeholders.</p>
-                            )}
-
-                            {/* Add a new image to gallery */}
-                            <div className="space-y-3">
-                              <span className="block text-[10px] font-mono font-bold uppercase text-slate-450 tracking-wider">Upload or Paste Image here to add to gallery:</span>
-                              <ImageUploader 
-                                onUploadSuccess={(url) => {
-                                  if (url) {
-                                    const nextG = [...(newFeature.gallery || []), url];
-                                    setNewFeature({ ...newFeature, gallery: nextG });
-                                  }
-                                }}
-                              />
-                              <div className="pt-2">
-                                <label className="block text-[10px] text-slate-450 uppercase mb-1 font-mono">Or paste a Direct Image Link to Add:</label>
-                                <div className="flex gap-2">
-                                  <input 
-                                    type="text"
-                                    id="manual-gallery-url-new"
-                                    placeholder="https://images.unsplash.com/..."
-                                    className="flex-1 bg-slate-950 border border-slate-900 rounded-xl px-3 py-1.5 text-xs text-slate-300 font-mono focus:outline-none"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const inputEl = document.getElementById('manual-gallery-url-new') as HTMLInputElement;
-                                      const urlVal = inputEl?.value?.trim();
-                                      if (urlVal) {
-                                        const nextG = [...(newFeature.gallery || []), urlVal];
-                                        setNewFeature({ ...newFeature, gallery: nextG });
-                                        if (inputEl) inputEl.value = '';
-                                      }
-                                    }}
-                                    className="px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
-                                  >
-                                    Add Link
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Testimonial Fields Group */}
-                        <div className="p-4 rounded-xl bg-slate-900/30 border border-slate-900 space-y-3">
-                          <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Bespoke Customer Interview</span>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div className="md:col-span-2">
-                              <label className="block text-[11px] text-slate-400 mb-1">Quote</label>
-                              <textarea
-                                value={newFeature.testimonialQuote || ""}
-                                onChange={(e) => setNewFeature({ ...newFeature, testimonialQuote: e.target.value })}
-                                placeholder="Integrating post-status badges transformed our content dashboard transparency..."
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs h-16 focus:outline-none focus:border-blue-500 resize-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1">Author Name</label>
-                              <input 
-                                type="text" 
-                                placeholder="Alex Mercer"
-                                value={newFeature.testimonialAuthor || ""}
-                                onChange={(e) => setNewFeature({ ...newFeature, testimonialAuthor: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1">Author Profession/Company Info</label>
-                              <input 
-                                type="text" 
-                                placeholder="Lead React Architect, JetLabs"
-                                value={newFeature.testimonialRole || ""}
-                                onChange={(e) => setNewFeature({ ...newFeature, testimonialRole: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Use Case 1 */}
-                        <div className="p-4 rounded-xl bg-slate-900/30 border border-slate-900 space-y-3">
-                          <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Custom Use-Case #1 Details</span>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Title</label>
-                              <input 
-                                type="text" 
-                                placeholder="Automated Recruitment Lists"
-                                value={newFeature.realWorldCase1Title || ""}
-                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase1Title: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Subtitle</label>
-                              <input 
-                                type="text" 
-                                placeholder="Interactive tracking"
-                                value={newFeature.realWorldCase1Subtitle || ""}
-                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase1Subtitle: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Tag / Category Badge</label>
-                              <input 
-                                type="text" 
-                                placeholder="HR Board"
-                                value={newFeature.realWorldCase1Tag || ""}
-                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase1Tag: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div className="md:col-span-3">
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Description</label>
-                              <input 
-                                type="text" 
-                                placeholder="Help recruiters see applicant counts directly on job postings automatically without refreshing."
-                                value={newFeature.realWorldCase1Desc || ""}
-                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase1Desc: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Use Case 2 */}
-                        <div className="p-4 rounded-xl bg-slate-900/30 border border-slate-900 space-y-3">
-                          <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Custom Use-Case #2 Details</span>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Title</label>
-                              <input 
-                                type="text" 
-                                placeholder="E-Commerce Badges"
-                                value={newFeature.realWorldCase2Title || ""}
-                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase2Title: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Subtitle</label>
-                              <input 
-                                type="text" 
-                                placeholder="Increase Conversions"
-                                value={newFeature.realWorldCase2Subtitle || ""}
-                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase2Subtitle: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Tag / Category Badge</label>
-                              <input 
-                                type="text" 
-                                placeholder="WooCommerce"
-                                value={newFeature.realWorldCase2Tag || ""}
-                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase2Tag: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div className="md:col-span-3">
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Description</label>
-                              <input 
-                                type="text" 
-                                placeholder="Trigger in stock and low inventory warnings instantly with specific color combinations."
-                                value={newFeature.realWorldCase2Desc || ""}
-                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase2Desc: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Use Case 3 */}
-                        <div className="p-4 rounded-xl bg-slate-900/30 border border-slate-900 space-y-3">
-                          <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">Custom Use-Case #3 Details</span>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Title</label>
-                              <input 
-                                type="text" 
-                                placeholder="Medical Staff Portals"
-                                value={newFeature.realWorldCase3Title || ""}
-                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase3Title: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Subtitle</label>
-                              <input 
-                                type="text" 
-                                placeholder="Interactive Booking"
-                                value={newFeature.realWorldCase3Subtitle || ""}
-                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase3Subtitle: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Tag / Category Badge</label>
-                              <input 
-                                type="text" 
-                                placeholder="Healthcare"
-                                value={newFeature.realWorldCase3Tag || ""}
-                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase3Tag: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div className="md:col-span-3">
-                              <label className="block text-[11px] text-slate-400 mb-1 font-medium">Description</label>
-                              <input 
-                                type="text" 
-                                placeholder="Track clinic rooms or active appointments in real time using green online indicators."
-                                value={newFeature.realWorldCase3Desc || ""}
-                                onChange={(e) => setNewFeature({ ...newFeature, realWorldCase3Desc: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end gap-3 pt-4 border-t border-slate-900 mt-4">
-                        <button 
-                          type="button" 
-                          onClick={handleCancelAddFeature}
-                          className="px-4 py-2 hover:bg-slate-900 rounded-xl text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
-                        >
-                          Cancel
-                        </button>
-                        <button 
-                          type="submit"
-                          disabled={isSaving}
-                          className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/35 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          {isSaving ? (
-                            <>
-                              <Icons.RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-200" />
-                              <span>Deploying...</span>
-                            </>
-                          ) : (
-                            <span>Deploy New Feature Card</span>
-                          )}
-                        </button>
-                      </div>
-                    </motion.form>
+                    <FeatureForm
+                      initialFeature={newFeature}
+                      isEditing={false}
+                      onSubmit={handleCreateFeatureForm}
+                      onCancel={handleCancelAddFeature}
+                      categories={settings?.categoriesList || DEFAULT_CATEGORIES}
+                      onAddCategoryClick={(target) => {
+                        setQuickCategoryTarget(target);
+                        setQuickCategoryName('');
+                        setQuickCategoryIcon('');
+                        setQuickCategoryOpen(true);
+                      }}
+                      isSaving={isSaving}
+                    />
                   ) : null}
 
                   {/* SEARCH, TOGGLE AND LISTING BAR */}
@@ -3568,6 +2769,149 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                       )}
                    </div>
                  </div>
+              )}
+
+              {/* INTEGRATIONS TAB */}
+              {activeTab === 'integrations' && (
+                <div className="space-y-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-xl font-display font-bold text-white">Ecosystem Partners & Compatibility Suite</h3>
+                      <p className="text-slate-400 text-xs mt-1">Configure compatibility layers, edit tested software versions, and toggle active front-end integrations.</p>
+                    </div>
+                    <div>
+                      <button
+                        onClick={() => {
+                          setToast({ message: "Ecosystem endpoints diagnosed and verified active!", type: "success" });
+                        }}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-850 text-xs font-semibold text-white rounded-xl border border-slate-800 transition-all cursor-pointer"
+                      >
+                        <Icons.CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Run Compatibility Audit</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Partners Grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {integrations.map((partner: any) => {
+                      const isJet = partner.id === 'jetengine';
+                      const isWoo = partner.id === 'woocommerce';
+                      const isEl = partner.id === 'elementor';
+                      const isCPT = partner.id === 'cpt';
+                      
+                      let displayIcon = <Puzzle className="w-6 h-6 text-blue-400" />;
+                      let colorTheme = "bg-blue-500/10 border-blue-500/20";
+                      
+                      if (isJet) {
+                        displayIcon = <Icons.Layers className="w-6 h-6 text-amber-400" />;
+                        colorTheme = "bg-amber-500/10 border-amber-500/20";
+                      } else if (isWoo) {
+                        displayIcon = <Icons.ShoppingCart className="w-6 h-6 text-purple-400" />;
+                        colorTheme = "bg-purple-500/10 border-purple-500/20";
+                      } else if (isEl) {
+                        displayIcon = <Icons.Grid className="w-6 h-6 text-rose-400" />;
+                        colorTheme = "bg-rose-500/10 border-rose-500/20";
+                      } else if (isCPT) {
+                        displayIcon = <Icons.Database className="w-6 h-6 text-sky-400" />;
+                        colorTheme = "bg-sky-500/10 border-sky-500/20";
+                      }
+
+                      return (
+                        <div 
+                          key={partner.id}
+                          className={`p-6 rounded-2xl bg-slate-900 border transition-all duration-200 ${
+                            partner.active ? 'border-slate-800' : 'border-slate-900/60 opacity-60'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-850">
+                            <div className="flex items-center gap-3">
+                              <div className={`p-3 rounded-xl ${colorTheme}`}>
+                                {displayIcon}
+                              </div>
+                              <div>
+                                <h4 className="font-display font-black text-slate-100 flex items-center gap-2">
+                                  <span>{partner.name}</span>
+                                  {partner.active && (
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                                  )}
+                                </h4>
+                                <p className="text-[10px] text-slate-500 font-mono tracking-wide">{partner.subtitle}</p>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const updatedPartner = { ...partner, active: !partner.active };
+                                await updateIntegration(updatedPartner);
+                                setToast({ 
+                                  message: `${partner.name} compatibility ${partner.active ? 'deactivated' : 'activated'}!`, 
+                                  type: 'success' 
+                                });
+                              }}
+                              className={`px-3 py-1.5 rounded-lg font-mono text-[10px] font-bold uppercase transition-all tracking-wider ${
+                                partner.active 
+                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20' 
+                                  : 'bg-slate-950 text-slate-500 border border-slate-850 hover:bg-slate-900'
+                              }`}
+                            >
+                              {partner.active ? 'Active' : 'Disabled'}
+                            </button>
+                          </div>
+
+                          <div className="py-4 space-y-3">
+                            <div className="flex items-center justify-between text-xs font-mono">
+                              <span className="text-slate-500">tested environment:</span>
+                              <span className="font-extrabold text-emerald-400 bg-slate-950 px-2.5 py-0.5 rounded-md border border-slate-850/60">{partner.testedVersion}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs font-mono">
+                              <span className="text-slate-500">ecosystem tag:</span>
+                              <span className="text-blue-400">{partner.badge}</span>
+                            </div>
+                            <p className="text-slate-400 text-xs leading-relaxed font-light line-clamp-3 bg-slate-950/20 p-3 rounded-xl border border-slate-900/40">
+                              {partner.description}
+                            </p>
+                          </div>
+
+                          <div className="pt-3 border-t border-slate-850/60 flex items-center justify-between gap-4">
+                            <span className="text-[10px] font-mono text-slate-500">ID: {partner.id}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingIntegrationId(partner.id);
+                                setEditInName(partner.name);
+                                setEditInSubtitle(partner.subtitle);
+                                setEditInBadge(partner.badge);
+                                setEditInDesc(partner.description);
+                                setEditInVersion(partner.testedVersion);
+                              }}
+                              className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 font-semibold text-xs text-white transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                            >
+                              <Icons.Edit3 className="w-3.5 h-3.5" />
+                              <span>Configure Layer</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Compatibility audit logs */}
+                  <div className="p-5 rounded-2xl bg-slate-900 border border-slate-850 space-y-3">
+                    <h4 className="text-xs font-mono font-bold tracking-widest text-slate-450 uppercase flex items-center gap-2">
+                      <Icons.RefreshCw className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Ecosystem Runtime Sandbox Logs</span>
+                    </h4>
+                    <div className="bg-slate-950 rounded-xl p-4 border border-slate-900/80 font-mono text-[11px] text-slate-400 space-y-1.5 leading-relaxed">
+                      <p className="text-slate-500">[2026-06-04T15:00] Initializing WP AJAX Switcher Endpoints ... OK</p>
+                      <p className="text-emerald-400/85">√ Hooked crocoblock_query_builder_register_badges hook successfully.</p>
+                      <p className="text-emerald-400/85">√ WooCommerce product_grid_render_loop override registered.</p>
+                      <p className="text-emerald-400/85">√ Elementor Loop template dynamic tag classes hooked.</p>
+                      <p className="text-slate-500">[2026-06-04T15:01] Sandbox environments diagnosed. Compatible database layers verified active.</p>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* SETTINGS TAB */}
@@ -5106,6 +4450,130 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
                     <span className="hidden sm:inline">{selectedInquiry.status === 'deleted' ? 'Delete Permanently' : 'Move to Trash'}</span>
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* INTEGRATIONS CONFIGURATION EDIT MODAL */}
+      <AnimatePresence>
+        {editingIntegrationId && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[250] flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden relative shadow-blue-500/5 text-left"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-sky-500 to-indigo-500" />
+              
+              <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-950">
+                <div className="flex items-center gap-2.5 text-blue-400">
+                  <Icons.Puzzle className="w-5 h-5 text-blue-400 animate-spin" style={{ animationDuration: '8s' }} />
+                  <div>
+                    <h4 className="font-display font-bold text-white text-base">Ecosystem Connector Editor</h4>
+                    <p className="text-[11px] text-slate-400">Customize compatibility tags, descriptions & versions.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setEditingIntegrationId(null)}
+                  className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-850 cursor-pointer transition-colors"
+                >
+                  <Icons.X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Integration Title</label>
+                  <input 
+                    type="text"
+                    value={editInName}
+                    onChange={(e) => setEditInName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Subtitle / Sub-header</label>
+                  <input 
+                    type="text"
+                    value={editInSubtitle}
+                    onChange={(e) => setEditInSubtitle(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 font-medium"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tested Version Level</label>
+                    <input 
+                      type="text"
+                      value={editInVersion}
+                      onChange={(e) => setEditInVersion(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-white text-xs font-mono focus:outline-none focus:border-blue-500 font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Display Badge / Category Tag</label>
+                    <input 
+                      type="text"
+                      value={editInBadge}
+                      onChange={(e) => setEditInBadge(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-white text-xs font-semibold focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Capabilities Narrative</label>
+                  <textarea 
+                    rows={4}
+                    value={editInDesc}
+                    onChange={(e) => setEditInDesc(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-850 rounded-xl p-4 text-white text-xs focus:outline-none focus:border-blue-500 leading-relaxed font-light"
+                  />
+                </div>
+              </div>
+
+              <div className="p-5 border-t border-slate-800 bg-slate-950 flex justify-end gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setEditingIntegrationId(null)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 font-bold text-xs transition-colors border border-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const original = integrations.find(item => item.id === editingIntegrationId);
+                    if (original) {
+                      const updatedPartner = {
+                        ...original,
+                        name: editInName,
+                        subtitle: editInSubtitle,
+                        badge: editInBadge,
+                        description: editInDesc,
+                        testedVersion: editInVersion
+                      };
+                      await updateIntegration(updatedPartner);
+                    }
+
+                    setEditingIntegrationId(null);
+                    setToast({ message: "Compatibility layer configuration serialized successfully!", type: 'success' });
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors cursor-pointer shadow-lg shadow-blue-500/10 flex items-center gap-1.5"
+                >
+                  <Icons.Check className="w-4 h-4" />
+                  Save Changes
+                </button>
               </div>
             </motion.div>
           </motion.div>

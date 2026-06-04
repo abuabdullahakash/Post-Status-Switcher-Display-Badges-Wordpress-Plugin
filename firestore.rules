@@ -33,6 +33,11 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // integrations: read and write allowed
+    match /integrations/{documentId} {
+      allow read, write: if true;
+    }
+
     // auditLogs: read and write allowed
     match /auditLogs/{documentId} {
       allow read, write: if true;
